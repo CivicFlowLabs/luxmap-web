@@ -59,23 +59,27 @@ export const normalizeRole = (role: any, fallbackFlags?: {
     switch (clean) {
       case 'administrator':
       case 'admin':
+      case 'system_admin':
       case '3':
         return UserRole.Admin
 
       case 'management_agency':
       case 'agency':
+      case 'superior':
       case 'leader':
       case '0':
         return UserRole.ManagementAgency
 
       case 'maintenance_engineer':
       case 'engineer':
+      case 'manager':
       case 'officer':
       case '1':
         return UserRole.MaintenanceEngineer
 
       case 'field_crew':
       case 'crew':
+      case 'field_engineer':
       case 'citizen':
       case '2':
         return UserRole.FieldCrew
