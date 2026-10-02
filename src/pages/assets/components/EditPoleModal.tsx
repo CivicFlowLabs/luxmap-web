@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Edit3, X, CheckCircle2 } from 'lucide-react'
+import { Edit3, X, CheckCircle2, MapPin } from 'lucide-react'
+import { LocationPickerMap } from '../../../components/LocationPickerMap'
 
 export interface EditablePoleData {
   id: string
@@ -15,6 +16,8 @@ export interface EditablePoleData {
   feeder_id: string
   warranty_expiry: string
   atlas?: string
+  lat?: number
+  lng?: number
 }
 
 interface EditPoleModalProps {
@@ -37,6 +40,8 @@ export const EditPoleModal: React.FC<EditPoleModalProps> = ({
   const [feederId, setFeederId] = useState('')
   const [warrantyExpiry, setWarrantyExpiry] = useState('')
   const [atlas, setAtlas] = useState('')
+  const [lat, setLat] = useState<number>(10.9701)
+  const [lng, setLng] = useState<number>(106.4896)
 
   useEffect(() => {
     if (pole) {
@@ -47,6 +52,8 @@ export const EditPoleModal: React.FC<EditPoleModalProps> = ({
       setFeederId(pole.feeder_id || '')
       setWarrantyExpiry(pole.warranty_expiry || '')
       setAtlas(pole.atlas || '')
+      setLat(typeof pole.lat === 'number' ? pole.lat : 10.9701)
+      setLng(typeof pole.lng === 'number' ? pole.lng : 106.4896)
     }
   }, [pole])
 
@@ -63,6 +70,8 @@ export const EditPoleModal: React.FC<EditPoleModalProps> = ({
       feeder_id: feederId,
       warranty_expiry: warrantyExpiry,
       atlas: atlas,
+      lat: lat,
+      lng: lng,
     })
     onClose()
   }
@@ -76,7 +85,7 @@ export const EditPoleModal: React.FC<EditPoleModalProps> = ({
       />
 
       {/* Modal Dialog */}
-      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 z-10 overflow-hidden animate-in zoom-in-95">
+      <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 z-10 overflow-hidden animate-in zoom-in-95">
         {/* Header */}
         <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-900 dark:bg-slate-950 text-white">
           <div className="flex items-center gap-2.5">
@@ -182,6 +191,59 @@ export const EditPoleModal: React.FC<EditPoleModalProps> = ({
               placeholder="VD: Gần quán cà phê, ngã ba..."
               className="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none"
             />
+          </div>
+
+          {/* Tọa độ WGS84 & Mini-Map */}
+          <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between">
+              <label className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-amber-500" />
+                <span>Tọa độ Bản đồ GIS (WGS84):</span>
+              </label>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                  Kinh độ (Longitude - °E):
+                </span>
+                <input
+                  type="number"
+                  step="0.000001"
+                  value={lng}
+                  onChange={(e) => setLng(parseFloat(e.target.value) || 0)}
+                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:border-[#1f3864] dark:focus:border-blue-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                  Vĩ độ (Latitude - °N):
+                </span>
+                <input
+                  type="number"
+                  step="0.000001"
+                  value={lat}
+                  onChange={(e) => setLat(parseFloat(e.target.value) || 0)}
+                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:border-[#1f3864] dark:focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* Interactive Mini Map */}
+            <div className="pt-1">
+              <LocationPickerMap
+                key={pole.id}
+                lat={lat}
+                lng={lng}
+                originalLat={pole.lat}
+                originalLng={pole.lng}
+                onChange={({ lat: newLat, lng: newLng }) => {
+                  setLat(newLat)
+                  setLng(newLng)
+                }}
+                height="230px"
+              />
+            </div>
           </div>
 
           {/* Footer Actions */}

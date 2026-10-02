@@ -24,6 +24,8 @@ import { AddCabinetModal, type NewCabinetData } from './components/AddCabinetMod
 import { AddSegmentModal, type NewSegmentData } from './components/AddSegmentModal'
 import { CabinetDetailModal } from './components/CabinetDetailModal'
 import { SegmentDetailModal } from './components/SegmentDetailModal'
+import { EditCabinetModal } from './components/EditCabinetModal'
+import { EditSegmentModal } from './components/EditSegmentModal'
 
 import mockPolesGeoJson from '../../data/mock-poles.geo.json'
 import mockSegmentsGeoJson from '../../data/mock-segments.geo.json'
@@ -84,6 +86,9 @@ export interface AssetSegmentItem {
   pole_count: number
   has_active_fault: boolean
   commune_name: string
+  start_coord?: [number, number]
+  end_coord?: [number, number]
+  coordinates?: [number, number][]
 }
 
 const COMMUNE_NAMES: Record<string, string> = {
@@ -188,6 +193,9 @@ const INITIAL_CABINETS: AssetCabinetItem[] = ((mockCabinetsGeoJson as any).featu
 const INITIAL_SEGMENTS: AssetSegmentItem[] = ((mockSegmentsGeoJson as any).features || []).map((f: any, idx: number) => {
   const p = f.properties || {}
   const sId = p.segment_id || `SEG-${String(idx + 1).padStart(3, '0')}`
+  const coords = (f.geometry?.coordinates as [number, number][]) || []
+  const startCoord = coords.length > 0 ? coords[0] : ([106.489639, 10.970187] as [number, number])
+  const endCoord = coords.length > 0 ? coords[coords.length - 1] : ([106.502308, 10.977419] as [number, number])
 
   return {
     id: sId,
@@ -198,6 +206,9 @@ const INITIAL_SEGMENTS: AssetSegmentItem[] = ((mockSegmentsGeoJson as any).featu
     pole_count: p.pole_count || 40,
     has_active_fault: !!p.has_active_segment_fault,
     commune_name: 'Xã Phước Hậu',
+    start_coord: startCoord,
+    end_coord: endCoord,
+    coordinates: coords,
   }
 })
 
@@ -226,7 +237,9 @@ export const AssetManagementPage: React.FC = () => {
   const [detailPole, setDetailPole] = useState<AssetPoleItem | null>(null)
   const [editPole, setEditPole] = useState<EditablePoleData | null>(null)
   const [detailCabinet, setDetailCabinet] = useState<AssetCabinetItem | null>(null)
+  const [editCabinet, setEditCabinet] = useState<AssetCabinetItem | null>(null)
   const [detailSegment, setDetailSegment] = useState<AssetSegmentItem | null>(null)
+  const [editSegment, setEditSegment] = useState<AssetSegmentItem | null>(null)
 
   // Success Banner state
   const [successBanner, setSuccessBanner] = useState<string | null>(null)
@@ -487,6 +500,8 @@ export const AssetManagementPage: React.FC = () => {
               feeder_id: updated.feeder_id,
               warranty_expiry: updated.warranty_expiry,
               atlas: updated.atlas,
+              lat: typeof updated.lat === 'number' ? updated.lat : item.lat,
+              lng: typeof updated.lng === 'number' ? updated.lng : item.lng,
             }
           : item
       )
@@ -504,12 +519,34 @@ export const AssetManagementPage: React.FC = () => {
               feeder_id: updated.feeder_id,
               warranty_expiry: updated.warranty_expiry,
               atlas: updated.atlas,
+              lat: typeof updated.lat === 'number' ? updated.lat : prev.lat,
+              lng: typeof updated.lng === 'number' ? updated.lng : prev.lng,
             }
           : null
       )
     }
 
-    showBanner(`Đã cập nhật thông số cột đèn "${updated.pole_id}"!`)
+    showBanner(`Đã cập nhật thông số và tọa độ cột đèn "${updated.pole_id}"!`)
+  }
+
+  const handleUpdateCabinet = (updated: AssetCabinetItem) => {
+    setCabinets((prev) =>
+      prev.map((item) => (item.id === updated.id ? updated : item))
+    )
+    if (detailCabinet && detailCabinet.id === updated.id) {
+      setDetailCabinet(updated)
+    }
+    showBanner(`Đã cập nhật thông số và tọa độ tủ điện "${updated.cabinet_name}"!`)
+  }
+
+  const handleUpdateSegment = (updated: AssetSegmentItem) => {
+    setSegments((prev) =>
+      prev.map((item) => (item.id === updated.id ? updated : item))
+    )
+    if (detailSegment && detailSegment.id === updated.id) {
+      setDetailSegment(updated)
+    }
+    showBanner(`Đã cập nhật thông tin tuyến đường "${updated.segment_name}"!`)
   }
 
   const handleImportSuccess = (count: number, newPoles?: AssetPoleItem[]) => {
@@ -978,10 +1015,18 @@ export const AssetManagementPage: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => setDetailCabinet(cab)}
-                            className="px-3 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-sky-300 font-bold rounded-lg text-xs transition cursor-pointer inline-flex items-center gap-1 border border-transparent dark:border-sky-500/20"
+                            className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-sky-300 font-bold rounded-lg text-xs transition cursor-pointer inline-flex items-center gap-1 border border-transparent dark:border-sky-500/20"
                           >
                             <Eye className="w-3 h-3 text-sky-400" />
                             <span>Chi tiết</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditCabinet(cab)}
+                            className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold rounded-lg text-xs transition cursor-pointer inline-flex items-center gap-1 border border-transparent dark:border-slate-700"
+                          >
+                            <Edit2 className="w-3 h-3 text-slate-400" />
+                            <span>Sửa</span>
                           </button>
                         </td>
                       </tr>
@@ -1004,6 +1049,7 @@ export const AssetManagementPage: React.FC = () => {
                     <th className="p-3.5">Tên tuyến đường</th>
                     <th className="p-3.5">Cấp đường</th>
                     <th className="p-3.5">Chiều dài (m)</th>
+                    <th className="p-3.5">Tọa độ Đầu - Cuối (GPS)</th>
                     <th className="p-3.5">Số cột chiếu sáng</th>
                     <th className="p-3.5">Địa bàn Xã</th>
                     <th className="p-3.5">Trạng thái lưới</th>
@@ -1013,7 +1059,7 @@ export const AssetManagementPage: React.FC = () => {
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                   {paginatedSegments.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-slate-400 dark:text-slate-400 text-xs">
+                      <td colSpan={9} className="p-8 text-center text-slate-400 dark:text-slate-400 text-xs">
                         Không tìm thấy tuyến đường nào phù hợp với bộ lọc hiện tại.
                       </td>
                     </tr>
@@ -1046,6 +1092,22 @@ export const AssetManagementPage: React.FC = () => {
                         <td className="p-3.5 font-mono font-semibold text-slate-800 dark:text-slate-200">
                           {seg.length_m.toLocaleString()} m ({((seg.length_m) / 1000).toFixed(1)} km)
                         </td>
+                        <td className="p-3.5 font-mono text-[11px] text-slate-600 dark:text-slate-300">
+                          {seg.start_coord && seg.end_coord ? (
+                            <div className="space-y-0.5 whitespace-nowrap">
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                                <span>{seg.start_coord[1].toFixed(4)}, {seg.start_coord[0].toFixed(4)}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>
+                                <span>{seg.end_coord[1].toFixed(4)}, {seg.end_coord[0].toFixed(4)}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400">Chưa xác định</span>
+                          )}
+                        </td>
                         <td className="p-3.5 font-bold text-slate-800 dark:text-slate-200 font-mono">
                           {seg.pole_count} cột
                         </td>
@@ -1077,10 +1139,18 @@ export const AssetManagementPage: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => setDetailSegment(seg)}
-                            className="px-3 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-sky-300 font-bold rounded-lg text-xs transition cursor-pointer inline-flex items-center gap-1 border border-transparent dark:border-sky-500/20"
+                            className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-sky-300 font-bold rounded-lg text-xs transition cursor-pointer inline-flex items-center gap-1 border border-transparent dark:border-sky-500/20"
                           >
                             <Eye className="w-3 h-3 text-sky-400" />
                             <span>Chi tiết</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditSegment(seg)}
+                            className="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold rounded-lg text-xs transition cursor-pointer inline-flex items-center gap-1 border border-transparent dark:border-slate-700"
+                          >
+                            <Edit2 className="w-3 h-3 text-slate-400" />
+                            <span>Sửa</span>
                           </button>
                         </td>
                       </tr>
@@ -1183,11 +1253,34 @@ export const AssetManagementPage: React.FC = () => {
       <CabinetDetailModal
         cabinet={detailCabinet}
         onClose={() => setDetailCabinet(null)}
+        onOpenEdit={(cab) => {
+          setDetailCabinet(null)
+          setEditCabinet(cab)
+        }}
       />
 
       <SegmentDetailModal
         segment={detailSegment}
         onClose={() => setDetailSegment(null)}
+        onOpenEdit={(seg) => {
+          setDetailSegment(null)
+          setEditSegment(seg)
+        }}
+      />
+
+      <EditCabinetModal
+        isOpen={!!editCabinet}
+        cabinet={editCabinet}
+        availableSegments={segments}
+        onClose={() => setEditCabinet(null)}
+        onSave={handleUpdateCabinet}
+      />
+
+      <EditSegmentModal
+        isOpen={!!editSegment}
+        segment={editSegment}
+        onClose={() => setEditSegment(null)}
+        onSave={handleUpdateSegment}
       />
 
       <ImportAssetModal
