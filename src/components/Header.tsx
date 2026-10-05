@@ -9,6 +9,7 @@ import {
   User as UserIcon,
   RefreshCw,
   ChevronDown,
+  CalendarDays,
 } from 'lucide-react'
 import { User, UserRole } from '../types/auth/web'
 import { getRoleName } from '../utils/roleUtils'
@@ -42,6 +43,7 @@ export const Header: React.FC<HeaderProps> = ({
   className = '',
 }) => {
   const location = useLocation()
+  const isWorkSchedule = location.pathname.startsWith('/work-schedule')
   const isAssets = location.pathname.startsWith('/assets')
   const isAdminPath = location.pathname.startsWith('/admin')
 
@@ -119,7 +121,9 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Left: Current Page Title / Context */}
         <div className="flex items-center gap-2.5 shrink-0">
           <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 border border-blue-100/80 flex items-center justify-center shrink-0 shadow-2xs">
-            {isAssets ? (
+            {isWorkSchedule ? (
+              <CalendarDays className="w-4.5 h-4.5" />
+            ) : isAssets ? (
               <Boxes className="w-4.5 h-4.5" />
             ) : isAdminPath ? (
               <ShieldCheck className="w-4.5 h-4.5" />
@@ -129,14 +133,18 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div className="flex flex-col">
             <h1 className="text-sm font-bold text-slate-900 leading-tight">
-              {isAssets
+              {isWorkSchedule
+                ? 'Lịch làm việc'
+                : isAssets
                 ? 'Quản lý tài sản'
                 : isAdminPath
                 ? 'Quản trị hệ thống'
                 : 'Bản đồ chiếu sáng'}
             </h1>
             <p className="text-[11px] text-slate-500 font-medium leading-none mt-0.5 hidden sm:block">
-              {isAssets
+              {isWorkSchedule
+                ? 'Lập lịch khảo sát, kiểm tra & điều phối sửa chữa'
+                : isAssets
                 ? 'Danh mục Cột đèn, Tủ điện & Tuyến đường'
                 : isAdminPath
                 ? 'Cấu hình và phân quyền người dùng'
@@ -144,7 +152,6 @@ export const Header: React.FC<HeaderProps> = ({
             </p>
           </div>
         </div>
-
         {/* Right: Notification Bell + Interactive Profile Dropdown + Quick Logout */}
         <div className="flex items-center gap-3 shrink-0">
           {/* Notification Bell with pulse ping */}

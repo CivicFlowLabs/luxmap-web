@@ -9,7 +9,7 @@ export const store = configureStore({
     reducer: rootReducer,
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({
-            thunk: false,
+            thunk: true,
             serializableCheck: false,
         }).concat(sagaMiddleware),
     devTools: true, // Kích hoạt Redux DevTools extension
