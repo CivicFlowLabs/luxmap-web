@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import {
-  Lightbulb,
   Bell,
   Map,
   Boxes,
@@ -17,8 +16,6 @@ import { getRoleName } from '../utils/roleUtils'
 import { ProfileModal } from './ProfileModal'
 
 export interface HeaderProps {
-  brandTitle?: string
-  brandSubtitle?: string
   user?: User | null
   userName?: string
   userRoleTitle?: string
@@ -33,8 +30,6 @@ export interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  brandTitle = 'LUXMAP',
-  brandSubtitle = 'Hệ thống Giám sát & Quản lý Chiếu sáng Công cộng',
   user = null,
   userName,
   userRoleTitle,
@@ -48,7 +43,6 @@ export const Header: React.FC<HeaderProps> = ({
   className = '',
 }) => {
   const location = useLocation()
-  const isGisMap = location.pathname.startsWith('/gis-map') || location.pathname === '/'
   const isWorkSchedule = location.pathname.startsWith('/work-schedule')
   const isAssets = location.pathname.startsWith('/assets')
   const isAdminPath = location.pathname.startsWith('/admin')
@@ -104,20 +98,6 @@ export const Header: React.FC<HeaderProps> = ({
     }
   }, [isProfileMenuOpen])
 
-  // Tính toán tab đang active để trượt pill chính xác với transform GPU
-  let activeIndex = 0
-  if (isWorkSchedule) {
-    activeIndex = 1
-  } else if (isAssets) {
-    activeIndex = 2
-  } else if (isAdminPath && effectiveAdmin) {
-    activeIndex = 3
-  } else {
-    activeIndex = 0
-  }
-
-  const tabCount = effectiveAdmin ? 4 : 3
-
   // Màu sắc badge vai trò
   let badgeClasses = 'bg-blue-50 text-blue-700 border-blue-200'
   if (user?.role === UserRole.Admin) {
@@ -138,133 +118,40 @@ export const Header: React.FC<HeaderProps> = ({
       <header
         className={`h-16 bg-white/85 backdrop-blur-xl border-b border-slate-200/80 px-6 flex items-center justify-between shrink-0 select-none z-30 shadow-[0_1px_3px_rgba(0,0,0,0.02)] transition-all duration-200 text-slate-900 ${className}`}
       >
-        {/* Left: Institutional Emblem + System Title + Subtitle */}
-        <div className="flex items-center gap-3.5 shrink-0 group cursor-pointer">
-          {/* Emblem: Deep sapphire tile with warm golden glowing bulb */}
-          <div className="w-10 h-10 rounded-2xl bg-linear-to-tr from-blue-600 via-blue-700 to-indigo-700 text-white flex items-center justify-center shadow-md shadow-blue-600/20 ring-4 ring-blue-50 group-hover:ring-blue-100/80 group-hover:scale-105 transition-all duration-300">
-            <Lightbulb className="w-5 h-5 text-amber-300 fill-amber-300/90 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110 drop-shadow-[0_0_8px_rgba(252,211,77,0.5)]" />
-          </div>
-
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              <span className="font-black text-sm tracking-wider text-slate-900 uppercase font-sans leading-none">
-                {brandTitle}
-              </span>
-            </div>
-            {brandSubtitle && (
-              <p className="text-[11px] text-slate-500 font-medium leading-none mt-1 hidden sm:block">
-                {brandSubtitle}
-              </p>
+        {/* Left: Current Page Title / Context */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 border border-blue-100/80 flex items-center justify-center shrink-0 shadow-2xs">
+            {isWorkSchedule ? (
+              <CalendarDays className="w-4.5 h-4.5" />
+            ) : isAssets ? (
+              <Boxes className="w-4.5 h-4.5" />
+            ) : isAdminPath ? (
+              <ShieldCheck className="w-4.5 h-4.5" />
+            ) : (
+              <Map className="w-4.5 h-4.5" />
             )}
+          </div>
+          <div className="flex flex-col">
+            <h1 className="text-sm font-bold text-slate-900 leading-tight">
+              {isWorkSchedule
+                ? 'Lịch làm việc'
+                : isAssets
+                ? 'Quản lý tài sản'
+                : isAdminPath
+                ? 'Quản trị hệ thống'
+                : 'Bản đồ chiếu sáng'}
+            </h1>
+            <p className="text-[11px] text-slate-500 font-medium leading-none mt-0.5 hidden sm:block">
+              {isWorkSchedule
+                ? 'Lập lịch khảo sát, kiểm tra & điều phối sửa chữa'
+                : isAssets
+                ? 'Danh mục Cột đèn, Tủ điện & Tuyến đường'
+                : isAdminPath
+                ? 'Cấu hình và phân quyền người dùng'
+                : 'Giám sát lưới điện & hiện trạng tài sản theo thời gian thực'}
+            </p>
           </div>
         </div>
-
-        {/* Center: GovTech Enterprise Segmented Navigation with Silky Sliding Pill */}
-        <nav
-          className={`relative grid ${
-            effectiveAdmin ? 'grid-cols-4 w-160' : 'grid-cols-3 w-120'
-          } bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/70 shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)] backdrop-blur-sm select-none`}
-        >
-          {/* Animated Sliding Active Pill */}
-          <div
-            className="absolute top-1.5 bottom-1.5 left-1.5 rounded-xl bg-white shadow-[0_2px_8px_-1px_rgba(15,23,42,0.08),0_1px_3px_rgba(15,23,42,0.04)] border border-slate-200/80 pointer-events-none transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]"
-            style={{
-              width: `calc((100% - 12px) / ${tabCount})`,
-              transform: `translateX(calc(${activeIndex * 100}%))`,
-            }}
-          />
-
-          {/* Tab 1: GIS Map */}
-          <NavLink
-            to="/gis-map"
-            className={`relative z-10 flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs select-none cursor-pointer transition-all duration-200 group active:scale-[0.98] ${
-              isGisMap
-                ? 'text-slate-900 font-bold'
-                : 'text-slate-500 hover:text-slate-800 hover:bg-white/40 font-medium'
-            }`}
-          >
-            <Map
-              className={`w-4 h-4 transition-all duration-300 ${
-                isGisMap
-                  ? 'scale-110 text-blue-600 drop-shadow-[0_1px_2px_rgba(37,99,235,0.3)]'
-                  : 'text-slate-400 group-hover:text-slate-600 group-hover:scale-105'
-              }`}
-            />
-            <span className="tracking-tight">Bản đồ chiếu sáng</span>
-            {isGisMap && (
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shadow-[0_0_6px_rgba(37,99,235,0.8)] animate-pulse" />
-            )}
-          </NavLink>
-
-          {/* Tab 2: Work Schedule */}
-          <NavLink
-            to="/work-schedule"
-            className={`relative z-10 flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs select-none cursor-pointer transition-all duration-200 group active:scale-[0.98] ${
-              isWorkSchedule
-                ? 'text-slate-900 font-bold'
-                : 'text-slate-500 hover:text-slate-800 hover:bg-white/40 font-medium'
-            }`}
-          >
-            <CalendarDays
-              className={`w-4 h-4 transition-all duration-300 ${
-                isWorkSchedule
-                  ? 'scale-110 text-blue-600 drop-shadow-[0_1px_2px_rgba(37,99,235,0.3)]'
-                  : 'text-slate-400 group-hover:text-slate-600 group-hover:scale-105'
-              }`}
-            />
-            <span className="tracking-tight">Lịch làm việc</span>
-            {isWorkSchedule && (
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shadow-[0_0_6px_rgba(37,99,235,0.8)] animate-pulse" />
-            )}
-          </NavLink>
-
-          {/* Tab 3: Asset Management */}
-          <NavLink
-            to="/assets"
-            className={`relative z-10 flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs select-none cursor-pointer transition-all duration-200 group active:scale-[0.98] ${
-              isAssets
-                ? 'text-slate-900 font-bold'
-                : 'text-slate-500 hover:text-slate-800 hover:bg-white/40 font-medium'
-            }`}
-          >
-            <Boxes
-              className={`w-4 h-4 transition-all duration-300 ${
-                isAssets
-                  ? 'scale-110 text-blue-600 drop-shadow-[0_1px_2px_rgba(37,99,235,0.3)]'
-                  : 'text-slate-400 group-hover:text-slate-600 group-hover:scale-105'
-              }`}
-            />
-            <span className="tracking-tight">Quản lý tài sản</span>
-            {isAssets && (
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shadow-[0_0_6px_rgba(37,99,235,0.8)] animate-pulse" />
-            )}
-          </NavLink>
-
-          {/* Tab 4: Admin Management (Chỉ dành cho Admin) */}
-          {effectiveAdmin && (
-            <NavLink
-              to="/admin/system"
-              className={`relative z-10 flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs select-none cursor-pointer transition-all duration-200 group active:scale-[0.98] ${
-                isAdminPath
-                  ? 'text-slate-900 font-bold'
-                  : 'text-slate-500 hover:text-slate-800 hover:bg-white/40 font-medium'
-              }`}
-            >
-              <ShieldCheck
-                className={`w-4 h-4 transition-all duration-300 ${
-                  isAdminPath
-                    ? 'scale-110 text-blue-600 drop-shadow-[0_1px_2px_rgba(37,99,235,0.3)]'
-                    : 'text-slate-400 group-hover:text-slate-600 group-hover:scale-105'
-                }`}
-              />
-              <span className="tracking-tight">Quản trị hệ thống</span>
-              {isAdminPath && (
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shadow-[0_0_6px_rgba(37,99,235,0.8)] animate-pulse" />
-              )}
-            </NavLink>
-          )}
-        </nav>
-
         {/* Right: Notification Bell + Interactive Profile Dropdown + Quick Logout */}
         <div className="flex items-center gap-3 shrink-0">
           {/* Notification Bell with pulse ping */}
@@ -413,18 +300,6 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
             )}
           </div>
-
-          {/* Quick Logout Button */}
-          {onLogout && (
-            <button
-              type="button"
-              onClick={onLogout}
-              className="w-9 h-9 rounded-xl flex items-center justify-center bg-slate-100/70 hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200/80 hover:border-rose-200/80 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer shadow-2xs group"
-              title="Đăng xuất nhanh"
-            >
-              <LogOut className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform duration-200" />
-            </button>
-          )}
         </div>
       </header>
 
