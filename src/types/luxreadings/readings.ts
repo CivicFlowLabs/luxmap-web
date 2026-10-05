@@ -1,12 +1,8 @@
 /**
- * Auto-generated Types for Module: luxreadings
- * Tự động tạo dựa trên endpoint: /api/v1/luxreadings/*
+ * Auto-generated Types for: luxreadings/readings
+ * Sinh tự động từ endpoint Backend
  */
-import type { ApiError } from './common'
-
-export interface ApiErrorResponse {
-    error?: ApiError
-}
+import type { DataSource } from '../common/enums'
 
 export interface CreateLuxReadingRequest {
     client_op_id: string | null
@@ -20,8 +16,6 @@ export interface CreateLuxReadingRequest {
     commune_id?: string | null
 }
 
-export type DataSource = 'field' | 'public_imagery' | 'calibration_rig' | 'simulated'
-
 export interface LuxReadingResponse {
     lux_id?: string | null
     client_op_id?: string | null
@@ -31,6 +25,13 @@ export interface LuxReadingResponse {
     meter_model?: string | null
     data_source?: string | null
     note?: string | null
+}
+
+export interface LuxReadingResponsePagedResult {
+    page?: number
+    page_size?: number
+    total?: number
+    items?: LuxReadingResponse[]
 }
 
 export interface LuxReadingWithLuminanceResponse {
@@ -56,10 +57,5 @@ export interface NearestLuminance {
     baseline_ratio?: number
     classified_as?: string | null
     observed_at?: string | null
-}
-
-export interface PageQuery {
-    page?: number
-    page_size?: number
 }
 

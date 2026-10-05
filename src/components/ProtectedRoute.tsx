@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { Loader2 } from 'lucide-react'
 import { RootState } from '../redux/rootReducer'
-import { UserRole } from '../types/auth'
+import { UserRole } from '../types/auth/web'
 import { hasAnyRole } from '../utils/roleUtils'
 
 export interface ProtectedRouteProps {

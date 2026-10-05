@@ -1,22 +1,23 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { Route, X, CheckCircle2, MapPin, RotateCcw } from 'lucide-react'
-import { SegmentRouteMap } from '../../../components/SegmentRouteMap'
-import { calculateRouteLengthMeters } from '../../../utils/gis-map/routeUtils'
-import type { AssetSegmentItem } from '../AssetManagementPage'
-import mockPolesGeoJson from '../../../data/mock-poles.geo.json'
+import { SegmentRouteMap } from '../../../../components/SegmentRouteMap'
+import { calculateRouteLengthMeters } from '../../../../utils/gis-map/routeUtils'
+import type { RoadClass } from '../../../../types/common/enums'
+import type { SegmentListItem } from '../../../../types/assets/segments'
+import mockPolesGeoJson from '../../../../data/mock-poles.geo.json'
 
 export interface EditSegmentModalProps {
   isOpen: boolean
-  segment: AssetSegmentItem | null
+  segment: SegmentListItem | null
   onClose: () => void
-  onSave: (updated: AssetSegmentItem) => void
+  onSave: (updated: SegmentListItem) => void
 }
 
 interface EditSegmentModalContentProps {
-  segment: AssetSegmentItem
+  segment: SegmentListItem
   onClose: () => void
-  onSave: (updated: AssetSegmentItem) => void
+  onSave: (updated: SegmentListItem) => void
 }
 
 const EditSegmentModalContent: React.FC<EditSegmentModalContentProps> = ({
@@ -24,32 +25,17 @@ const EditSegmentModalContent: React.FC<EditSegmentModalContentProps> = ({
   onClose,
   onSave,
 }) => {
-  const initialStart: [number, number] =
-    segment.start_coord && segment.start_coord[0] > 50
-      ? segment.start_coord
-      : segment.coordinates && segment.coordinates.length > 0
-      ? segment.coordinates[0]
-      : [108.973, 11.581]
-
-  const initialEnd: [number, number] =
-    segment.end_coord && segment.end_coord[0] > 50
-      ? segment.end_coord
-      : segment.coordinates && segment.coordinates.length > 0
-      ? segment.coordinates[segment.coordinates.length - 1]
-      : [108.978, 11.585]
-
-  const initialCoords: [number, number][] =
-    segment.coordinates && segment.coordinates.length > 0
-      ? segment.coordinates
-      : [initialStart, initialEnd]
+  const initialStart: [number, number] = [106.485, 10.972]
+  const initialEnd: [number, number] = [106.495, 10.978]
+  const initialCoords: [number, number][] = [initialStart, initialEnd]
 
   const [segmentName, setSegmentName] = useState(segment.segment_name || '')
-  const [roadClass, setRoadClass] = useState<'inter_commune' | 'inter_village' | 'alley'>(
-    segment.road_class || 'inter_commune'
+  const [roadClass, setRoadClass] = useState<RoadClass>(
+    (segment.road_class as RoadClass) || 'inter_commune'
   )
   const [lengthM, setLengthM] = useState<number>(segment.length_m || 1000)
-  const [communeName, setCommuneName] = useState(segment.commune_name || 'Xã Phước Hậu')
-  const [hasActiveFault, setHasActiveFault] = useState<boolean>(!!segment.has_active_fault)
+  const [communeName, setCommuneName] = useState(segment.commune_id || 'Xã Tân An Hội')
+  const [hasActiveFault, setHasActiveFault] = useState<boolean>(false)
 
   // Coordinate States initialized with valid values immediately
   const [startLat, setStartLat] = useState<number>(initialStart[1])
@@ -140,11 +126,8 @@ const EditSegmentModalContent: React.FC<EditSegmentModalContentProps> = ({
       segment_name: segmentName.trim() || segment.segment_id,
       road_class: roadClass,
       length_m: lengthM,
-      commune_name: communeName.trim(),
-      has_active_fault: hasActiveFault,
-      start_coord: [startLng, startLat],
-      end_coord: [endLng, endLat],
-      coordinates: routeCoords,
+      commune_id: communeName.trim() || segment.commune_id || 'cuchi_01',
+      updated_at: new Date().toISOString(),
     })
     onClose()
   }
@@ -190,12 +173,11 @@ const EditSegmentModalContent: React.FC<EditSegmentModalContentProps> = ({
             <label className="font-bold text-slate-700 dark:text-slate-300">Cấp đường quy hoạch:</label>
             <select
               value={roadClass}
-              onChange={(e) => setRoadClass(e.target.value as any)}
+              onChange={(e) => setRoadClass(e.target.value as RoadClass)}
               className="w-full p-2.5 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl font-semibold text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer"
             >
               <option value="inter_commune">Đường liên xã</option>
               <option value="inter_village">Đường liên ấp / thôn</option>
-              <option value="alley">Đường nhánh / ngõ hẻm</option>
             </select>
           </div>
           <div className="space-y-1">

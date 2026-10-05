@@ -1,13 +1,13 @@
 import React from 'react'
 import { createPortal } from 'react-dom'
-import { X, Route, MapPin, AlertCircle, CheckCircle2, Edit3 } from 'lucide-react'
-import { SegmentRouteMap } from '../../../components/SegmentRouteMap'
-import type { AssetSegmentItem } from '../AssetManagementPage'
+import { X, Route, MapPin, CheckCircle2, Edit3 } from 'lucide-react'
+import { SegmentRouteMap } from '../../../../components/SegmentRouteMap'
+import type { SegmentListItem } from '../../../../types/assets/segments'
 
 interface SegmentDetailModalProps {
-  segment: AssetSegmentItem | null
+  segment: SegmentListItem | null
   onClose: () => void
-  onOpenEdit?: (segment: AssetSegmentItem) => void
+  onOpenEdit?: (segment: SegmentListItem) => void
 }
 
 export const SegmentDetailModal: React.FC<SegmentDetailModalProps> = ({
@@ -29,7 +29,7 @@ export const SegmentDetailModal: React.FC<SegmentDetailModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-mono text-xs bg-white/25 px-2 py-0.5 rounded-md font-bold">
-                  {segment.segment_id}
+                  {segment.external_ref}
                 </span>
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-900/40 text-blue-100">
                   {segment.road_class === 'inter_commune'
@@ -72,16 +72,12 @@ export const SegmentDetailModal: React.FC<SegmentDetailModalProps> = ({
             </div>
 
             <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl">
-              <div className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider">Trạng thái GIS</div>
+              <div className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider">Nguồn dữ liệu</div>
               <div className="text-lg font-black text-emerald-700 dark:text-emerald-400 mt-1 flex items-center justify-center gap-1">
-                {segment.has_active_fault ? (
-                  <span className="text-rose-600 dark:text-rose-400">Sự cố</span>
-                ) : (
-                  <span>Tốt</span>
-                )}
+                <span>{segment.data_source || 'GIS'}</span>
               </div>
               <div className="text-[10px] text-slate-400 dark:text-slate-500">
-                {segment.has_active_fault ? 'Cần kiểm tra' : '100% bình thường'}
+                Khảo sát thực địa
               </div>
             </div>
           </div>
@@ -93,7 +89,7 @@ export const SegmentDetailModal: React.FC<SegmentDetailModalProps> = ({
                 <MapPin className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" />
                 <span>Địa bàn quản lý:</span>
               </span>
-              <strong className="text-slate-800 dark:text-slate-200">{segment.commune_name}</strong>
+              <strong className="text-slate-800 dark:text-slate-200">{segment.commune_id || 'Củ Chi'}</strong>
             </div>
 
             <div className="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-700/60 pb-2">
@@ -104,60 +100,22 @@ export const SegmentDetailModal: React.FC<SegmentDetailModalProps> = ({
             </div>
 
             <div className="flex items-center justify-between pt-0.5">
-              <span className="text-slate-500 dark:text-slate-400">Tình trạng phân đoạn:</span>
-              <span className={`font-bold flex items-center gap-1.5 ${segment.has_active_fault ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
-                {segment.has_active_fault ? (
-                  <>
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    <span>Có phân đoạn báo lỗi</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Lưới điện vận hành ổn định</span>
-                  </>
-                )}
+              <span className="text-slate-500 dark:text-slate-400">Trạng thái cập nhật:</span>
+              <span className="font-bold flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>{segment.updated_at ? new Date(segment.updated_at).toLocaleDateString('vi-VN') : 'Mới cập nhật'}</span>
               </span>
-            </div>
-          </div>
-
-          {/* Tọa độ Điểm đầu & Điểm cuối GPS */}
-          <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-2">
-            <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-blue-500" />
-              <span>Tọa độ Điểm Đầu & Điểm Cuối Tuyến (WGS84):</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
-              <div className="p-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                <div className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                  <span>Điểm đầu (Start GPS):</span>
-                </div>
-                <div className="font-mono text-slate-700 dark:text-slate-300 mt-1 font-semibold">
-                  {segment.start_coord ? `${segment.start_coord[1].toFixed(6)}, ${segment.start_coord[0].toFixed(6)}` : 'Chưa có'}
-                </div>
-              </div>
-              <div className="p-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700/80">
-                <div className="text-rose-600 dark:text-rose-400 font-bold flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-                  <span>Điểm cuối (End GPS):</span>
-                </div>
-                <div className="font-mono text-slate-700 dark:text-slate-300 mt-1 font-semibold">
-                  {segment.end_coord ? `${segment.end_coord[1].toFixed(6)}, ${segment.end_coord[0].toFixed(6)}` : 'Chưa có'}
-                </div>
-              </div>
             </div>
           </div>
 
           {/* Bản đồ Tuyến đường Thực địa */}
           <div className="space-y-1.5 pt-1">
             <label className="font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between text-xs">
-              <span>Lộ trình Tim đường Thực địa Tuyến:</span>
+              <span>Lộ trình Tuyến đường Chiếu sáng:</span>
             </label>
             <SegmentRouteMap
-              coordinates={segment.coordinates}
-              startCoord={segment.start_coord}
-              endCoord={segment.end_coord}
+              startCoord={[106.485, 10.972]}
+              endCoord={[106.495, 10.978]}
               height="220px"
             />
           </div>

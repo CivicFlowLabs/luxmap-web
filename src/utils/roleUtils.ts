@@ -4,7 +4,7 @@
  * Khớp hoàn toàn với 4 vai trò của Backend: administrator, management_agency, maintenance_engineer, field_crew
  */
 
-import { UserRole, User, JwtPayloadClaims, CurrentUserResponse } from '../types/auth'
+import { UserRole, User, JwtPayloadClaims, CurrentUserResponse } from '../types/auth/web'
 
 /**
  * Giải mã JWT Access Token phía client (Base64Url an toàn với UTF-8, zero-dependency)

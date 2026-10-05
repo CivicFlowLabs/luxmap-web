@@ -10,7 +10,7 @@ import {
   RefreshCw,
   X,
 } from 'lucide-react'
-import { User as UserType, UserRole } from '../types/auth'
+import { User as UserType, UserRole } from '../types/auth/web'
 import { getRoleName } from '../utils/roleUtils'
 
 export interface ProfileModalProps {

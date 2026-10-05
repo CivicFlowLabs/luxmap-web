@@ -2,19 +2,13 @@ import React, { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Route, CheckCircle2 } from 'lucide-react'
 
-export interface NewSegmentData {
-  segment_id: string
-  segment_name: string
-  road_class: 'inter_commune' | 'inter_village' | 'alley'
-  length_m: number
-  pole_count: number
-  commune_name: string
-}
+import type { RoadClass } from '../../../../types/common/enums'
+import type { SegmentListItem } from '../../../../types/assets/segments'
 
 interface AddSegmentModalProps {
   isOpen: boolean
   onClose: () => void
-  onAddSegment: (data: NewSegmentData) => void
+  onAddSegment: (data: SegmentListItem) => void
   existingCount: number
 }
 
@@ -28,7 +22,7 @@ export const AddSegmentModal: React.FC<AddSegmentModalProps> = ({
 
   const segmentId = nextCode
   const [segmentName, setSegmentName] = useState('')
-  const [roadClass, setRoadClass] = useState<'inter_commune' | 'inter_village' | 'alley'>('inter_commune')
+  const [roadClass, setRoadClass] = useState<RoadClass>('inter_commune')
   const [lengthM, setLengthM] = useState('1200')
   const [poleCount, setPoleCount] = useState('35')
 
@@ -42,7 +36,9 @@ export const AddSegmentModal: React.FC<AddSegmentModalProps> = ({
       road_class: roadClass,
       length_m: parseInt(lengthM, 10) || 1000,
       pole_count: parseInt(poleCount, 10) || 0,
-      commune_name: '',
+      commune_id: 'cuchi_01',
+      data_source: 'field',
+      updated_at: new Date().toISOString(),
     })
     onClose()
   }
@@ -81,7 +77,6 @@ export const AddSegmentModal: React.FC<AddSegmentModalProps> = ({
             >
               <option value="inter_commune" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">Đường liên xã (Trục chính)</option>
               <option value="inter_village" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">Đường liên thôn / liên ấp</option>
-              <option value="alley" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">Đường nhánh / Ngõ xóm</option>
             </select>
           </div>
 
