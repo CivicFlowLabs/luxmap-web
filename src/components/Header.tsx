@@ -10,6 +10,7 @@ import {
   User as UserIcon,
   RefreshCw,
   ChevronDown,
+  CalendarDays,
 } from 'lucide-react'
 import { User, UserRole } from '../types/auth'
 import { getRoleName } from '../utils/roleUtils'
@@ -48,6 +49,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const location = useLocation()
   const isGisMap = location.pathname.startsWith('/gis-map') || location.pathname === '/'
+  const isWorkSchedule = location.pathname.startsWith('/work-schedule')
   const isAssets = location.pathname.startsWith('/assets')
   const isAdminPath = location.pathname.startsWith('/admin')
 
@@ -104,15 +106,17 @@ export const Header: React.FC<HeaderProps> = ({
 
   // Tính toán tab đang active để trượt pill chính xác với transform GPU
   let activeIndex = 0
-  if (effectiveAdmin) {
-    if (isAssets) activeIndex = 1
-    else if (isAdminPath) activeIndex = 2
-    else activeIndex = 0
+  if (isWorkSchedule) {
+    activeIndex = 1
+  } else if (isAssets) {
+    activeIndex = 2
+  } else if (isAdminPath && effectiveAdmin) {
+    activeIndex = 3
   } else {
-    activeIndex = isAssets ? 1 : 0
+    activeIndex = 0
   }
 
-  const tabCount = effectiveAdmin ? 3 : 2
+  const tabCount = effectiveAdmin ? 4 : 3
 
   // Màu sắc badge vai trò
   let badgeClasses = 'bg-blue-50 text-blue-700 border-blue-200'
@@ -158,7 +162,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Center: GovTech Enterprise Segmented Navigation with Silky Sliding Pill */}
         <nav
           className={`relative grid ${
-            effectiveAdmin ? 'grid-cols-3 w-127.5' : 'grid-cols-2 w-92.5'
+            effectiveAdmin ? 'grid-cols-4 w-160' : 'grid-cols-3 w-120'
           } bg-slate-100/80 p-1.5 rounded-2xl border border-slate-200/70 shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)] backdrop-blur-sm select-none`}
         >
           {/* Animated Sliding Active Pill */}
@@ -192,7 +196,29 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </NavLink>
 
-          {/* Tab 2: Asset Management */}
+          {/* Tab 2: Work Schedule */}
+          <NavLink
+            to="/work-schedule"
+            className={`relative z-10 flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs select-none cursor-pointer transition-all duration-200 group active:scale-[0.98] ${
+              isWorkSchedule
+                ? 'text-slate-900 font-bold'
+                : 'text-slate-500 hover:text-slate-800 hover:bg-white/40 font-medium'
+            }`}
+          >
+            <CalendarDays
+              className={`w-4 h-4 transition-all duration-300 ${
+                isWorkSchedule
+                  ? 'scale-110 text-blue-600 drop-shadow-[0_1px_2px_rgba(37,99,235,0.3)]'
+                  : 'text-slate-400 group-hover:text-slate-600 group-hover:scale-105'
+              }`}
+            />
+            <span className="tracking-tight">Lịch làm việc</span>
+            {isWorkSchedule && (
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shadow-[0_0_6px_rgba(37,99,235,0.8)] animate-pulse" />
+            )}
+          </NavLink>
+
+          {/* Tab 3: Asset Management */}
           <NavLink
             to="/assets"
             className={`relative z-10 flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-xs select-none cursor-pointer transition-all duration-200 group active:scale-[0.98] ${
@@ -214,7 +240,7 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </NavLink>
 
-          {/* Tab 3: Admin Management (Chỉ dành cho Admin) */}
+          {/* Tab 4: Admin Management (Chỉ dành cho Admin) */}
           {effectiveAdmin && (
             <NavLink
               to="/admin/system"

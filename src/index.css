@@ -214,26 +214,26 @@ button:focus-visible {
 
 /* Custom Thin Scrollbar */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(0, 0, 0, 0.03);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #203154;
+  background: #94a3b8;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334e80;
+  background: #64748b;
 }
 
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #203154 transparent;
+  scrollbar-color: #94a3b8 transparent;
 }
 
 /* MapLibre Geolocate Control Button Animations */

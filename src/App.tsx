@@ -8,6 +8,7 @@ import { ProtectedRoute } from './components/ProtectedRoute'
 import { LoginPage } from './pages/login/LoginPage'
 import { DefaultLayout } from './layout/DefaultLayout'
 import { GisMapPage } from './pages/gis-map/GisMapPage'
+import { WorkSchedulePage } from './pages/work-schedule/WorkSchedulePage'
 import { AssetManagementPage } from './pages/assets/AssetManagementPage'
 import { ForbiddenPage } from './pages/forbidden/ForbiddenPage'
 import { AdminManagementPage } from './pages/admin/AdminManagementPage'
@@ -45,6 +46,13 @@ function App() {
           
           {/* Tuyến bản đồ GIS chung cho cả 4 vai trò đã đăng nhập */}
           <Route path="/gis-map" element={<GisMapPage />} />
+
+          {/* Tuyến Quản lý Lịch làm việc & các đường dẫn tương đương */}
+          <Route path="/work-schedule" element={<WorkSchedulePage />} />
+          <Route path="/work%20schedule" element={<Navigate to="/work-schedule" replace />} />
+          <Route path="/work schedule" element={<Navigate to="/work-schedule" replace />} />
+          <Route path="/work_schedule" element={<Navigate to="/work-schedule" replace />} />
+          <Route path="/schedule" element={<Navigate to="/work-schedule" replace />} />
 
           {/* Tuyến Quản lý tài sản */}
           <Route path="/assets" element={<AssetManagementPage />} />

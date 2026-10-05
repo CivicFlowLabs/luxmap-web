@@ -53,27 +53,31 @@ export const normalizeRole = (role: any, fallbackFlags?: {
     if (role === 2 || role === UserRole.FieldCrew) return UserRole.FieldCrew
   }
 
-  // 2. Nếu là chuỗi (backend trả về trong JWT claim: "administrator", "management_agency", "maintenance_engineer", "field_crew")
+  // 2. Nếu là chuỗi (backend trả về trong JWT claim: "superior", "manager", "field_engineer", "system_admin")
   if (typeof role === 'string') {
     const clean = role.trim().toLowerCase()
     switch (clean) {
       case 'administrator':
+      case 'system_admin':
       case 'admin':
       case '3':
         return UserRole.Admin
 
+      case 'superior':
       case 'management_agency':
       case 'agency':
       case 'leader':
       case '0':
         return UserRole.ManagementAgency
 
+      case 'manager':
       case 'maintenance_engineer':
       case 'engineer':
       case 'officer':
       case '1':
         return UserRole.MaintenanceEngineer
 
+      case 'field_engineer':
       case 'field_crew':
       case 'crew':
       case 'citizen':
@@ -202,15 +206,15 @@ export const getRoleName = (role?: UserRole | string | number): string => {
   const normalized = normalizeRole(role)
   switch (normalized) {
     case UserRole.Admin:
-      return 'Quản trị viên'
+      return 'Quản trị hệ thống (Admin)'
     case UserRole.ManagementAgency:
-      return 'Cơ quan Quản lý'
+      return 'Cấp trên / Giám sát (Superior)'
     case UserRole.MaintenanceEngineer:
-      return 'Kỹ sư Bảo trì'
+      return 'Quản lý (Manager)'
     case UserRole.FieldCrew:
-      return 'Đội Khảo sát & Sửa chữa'
+      return 'Kỹ sư hiện trường (Field Engineer)'
     default:
-      return 'Kỹ sư Vận hành'
+      return 'Cán bộ kỹ thuật'
   }
 }
 
