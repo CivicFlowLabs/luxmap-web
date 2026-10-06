@@ -9,7 +9,7 @@ import {
   ChevronRight,
   CalendarDays,
 } from 'lucide-react'
-import { User, UserRole } from '../types/auth'
+import { User, UserRole } from '../types/auth/web'
 
 export interface SidebarProps {
   brandTitle?: string

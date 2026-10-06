@@ -36,5 +36,6 @@ desktop.ini
 .env.*
 !.env.example
 
+docs
 
-
+.agent

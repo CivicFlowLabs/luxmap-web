@@ -7,7 +7,7 @@ import {
   WebAuthTokenResponse,
   CurrentUserResponse,
   User,
-} from '../../types/auth'
+} from '../../types/auth/web'
 import tokenStorage from '../../utils/tokenStorage'
 import { createUserFromToken, mapCurrentUserToUser } from '../../utils/roleUtils'
 import {

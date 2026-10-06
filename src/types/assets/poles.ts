@@ -1,0 +1,58 @@
+/**
+ * Auto-generated Types for: assets/poles
+ * Sinh tự động từ endpoint Backend
+ */
+import type { DataSource } from '../common/enums'
+import type { AssetLocation } from '../common/base'
+import type { ActiveFixture } from './fixtures'
+
+export interface CreatePoleRequest {
+    external_ref?: string | null
+    segment_id: string | null
+    feeder_id?: string | null
+    commune_id: string | null
+    geom_wkt: string | null
+    near_sensitive_poi?: boolean
+    data_source: DataSource
+}
+
+export interface PoleDetail {
+    pole: PoleListItem
+    segment_name: string | null
+    geom_wkt: string | null
+    created_at: string | null
+}
+
+export interface PoleListItem {
+    pole_id: string | null
+    external_ref?: string | null
+    segment_id: string | null
+    feeder_id?: string | null
+    commune_id: string | null
+    data_source: DataSource
+    near_sensitive_poi: boolean
+    location: AssetLocation
+    active_fixture?: ActiveFixture
+    updated_at: string | null
+}
+
+export interface PoleListItemPagedResult {
+    page?: number
+    page_size?: number
+    total?: number
+    items?: PoleListItem[]
+}
+
+export interface SetPoleFeederRequest {
+    feeder_id?: string | null
+}
+
+export interface UpdatePoleRequest {
+    external_ref?: string | null
+    segment_id: string | null
+    feeder_id?: string | null
+    geom_wkt: string | null
+    near_sensitive_poi?: boolean
+    data_source: DataSource
+}
+

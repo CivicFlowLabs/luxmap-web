@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { LoginRequest } from '../types/auth'
+import type { LoginRequest } from '../types/auth/web'
 
 /**
  * Regex kiểm tra số điện thoại Việt Nam (10 số)

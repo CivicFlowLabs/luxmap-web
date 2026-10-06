@@ -11,7 +11,7 @@ import {
   ChevronDown,
   CalendarDays,
 } from 'lucide-react'
-import { User, UserRole } from '../types/auth'
+import { User, UserRole } from '../types/auth/web'
 import { getRoleName } from '../utils/roleUtils'
 import { ProfileModal } from './ProfileModal'
 

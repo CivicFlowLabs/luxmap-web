@@ -1,27 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { Edit3, X, CheckCircle2 } from 'lucide-react'
-
-export interface EditablePoleData {
-  id: string
-  pole_id: string
-  segment_id: string
-  segment_name: string
-  commune_id?: string
-  commune_name?: string
-  lamp_watt: number
-  power_source: 'grid'
-  fixture_status: 'normal' | 'dim' | 'out' | 'unknown'
-  feeder_id: string
-  warranty_expiry: string
-  atlas?: string
-}
+import { Edit3, X, CheckCircle2, MapPin } from 'lucide-react'
+import { LocationPickerMap } from '../../../../components/LocationPickerMap'
+import type { PoleListItem } from '../../../../types/assets/poles'
 
 interface EditPoleModalProps {
   isOpen: boolean
-  pole: EditablePoleData | null
+  pole: PoleListItem | null
   onClose: () => void
-  onSave: (updated: EditablePoleData) => void
+  onSave: (updated: PoleListItem) => void
 }
 
 export const EditPoleModal: React.FC<EditPoleModalProps> = ({
@@ -30,23 +17,19 @@ export const EditPoleModal: React.FC<EditPoleModalProps> = ({
   onClose,
   onSave,
 }) => {
-  const [segmentName, setSegmentName] = useState('')
   const [lampWatt, setLampWatt] = useState<number>(100)
-  const [powerSource, setPowerSource] = useState<'grid'>('grid')
-  const [fixtureStatus, setFixtureStatus] = useState<'normal' | 'dim' | 'out' | 'unknown'>('normal')
   const [feederId, setFeederId] = useState('')
   const [warrantyExpiry, setWarrantyExpiry] = useState('')
-  const [atlas, setAtlas] = useState('')
+  const [lat, setLat] = useState<number>(10.9701)
+  const [lng, setLng] = useState<number>(106.4896)
 
   useEffect(() => {
     if (pole) {
-      setSegmentName(pole.segment_name || '')
-      setLampWatt(pole.lamp_watt || 100)
-      setPowerSource(pole.power_source || 'grid')
-      setFixtureStatus(pole.fixture_status || 'normal')
+      setLampWatt(pole.active_fixture?.lamp_watt || 100)
       setFeederId(pole.feeder_id || '')
-      setWarrantyExpiry(pole.warranty_expiry || '')
-      setAtlas(pole.atlas || '')
+      setWarrantyExpiry(pole.active_fixture?.warranty_expiry || '')
+      setLat(typeof pole.location?.lat === 'number' ? pole.location.lat : 10.9701)
+      setLng(typeof pole.location?.lng === 'number' ? pole.location.lng : 106.4896)
     }
   }, [pole])
 
@@ -54,16 +37,23 @@ export const EditPoleModal: React.FC<EditPoleModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSave({
+    const updated: PoleListItem = {
       ...pole,
-      segment_name: segmentName,
-      lamp_watt: lampWatt,
-      power_source: powerSource,
-      fixture_status: fixtureStatus,
-      feeder_id: feederId,
-      warranty_expiry: warrantyExpiry,
-      atlas: atlas,
-    })
+      feeder_id: feederId || null,
+      location: {
+        lat,
+        lng,
+      },
+      active_fixture: pole.active_fixture
+        ? {
+            ...pole.active_fixture,
+            lamp_watt: lampWatt,
+            warranty_expiry: warrantyExpiry || null,
+          }
+        : undefined,
+      updated_at: new Date().toISOString(),
+    }
+    onSave(updated)
     onClose()
   }
 
@@ -76,7 +66,7 @@ export const EditPoleModal: React.FC<EditPoleModalProps> = ({
       />
 
       {/* Modal Dialog */}
-      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 z-10 overflow-hidden animate-in zoom-in-95">
+      <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 z-10 overflow-hidden animate-in zoom-in-95">
         {/* Header */}
         <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-900 dark:bg-slate-950 text-white">
           <div className="flex items-center gap-2.5">
@@ -85,7 +75,7 @@ export const EditPoleModal: React.FC<EditPoleModalProps> = ({
             </div>
             <div>
               <h3 className="font-bold text-white text-sm">Chỉnh Sửa Thông Số Cột: {pole.pole_id}</h3>
-              <p className="text-[11px] text-slate-300 dark:text-slate-400">{pole.commune_name}</p>
+              <p className="text-[11px] text-slate-300 dark:text-slate-400">Địa bàn: {pole.commune_id || 'Củ Chi'}</p>
             </div>
           </div>
           <button
@@ -99,19 +89,9 @@ export const EditPoleModal: React.FC<EditPoleModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs text-slate-800 dark:text-slate-200 max-h-[75vh] overflow-y-auto">
-          <div className="space-y-1">
-            <label className="font-bold text-slate-700 dark:text-slate-300">Tuyến đường:</label>
-            <input
-              type="text"
-              value={segmentName}
-              onChange={(e) => setSegmentName(e.target.value)}
-              className="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-900 dark:text-slate-100 focus:outline-none focus:border-[#1f3864] dark:focus:border-blue-500"
-            />
-          </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="font-bold text-slate-700 dark:text-slate-300">Công suất:</label>
+              <label className="font-bold text-slate-700 dark:text-slate-300">Công suất đèn:</label>
               <select
                 value={lampWatt}
                 onChange={(e) => setLampWatt(Number(e.target.value))}
@@ -128,7 +108,7 @@ export const EditPoleModal: React.FC<EditPoleModalProps> = ({
             <div className="space-y-1">
               <label className="font-bold text-slate-700 dark:text-slate-300">Nguồn cấp:</label>
               <select
-                value={powerSource}
+                value="grid"
                 disabled
                 className="w-full p-2.5 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-semibold text-slate-900 dark:text-slate-100 focus:outline-none cursor-not-allowed"
               >
@@ -139,17 +119,13 @@ export const EditPoleModal: React.FC<EditPoleModalProps> = ({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="font-bold text-slate-700 dark:text-slate-300">Trạng thái vận hành:</label>
-              <select
-                value={fixtureStatus}
-                onChange={(e) => setFixtureStatus(e.target.value as any)}
-                className="w-full p-2.5 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer"
-              >
-                <option value="normal" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">🟢 Bình thường</option>
-                <option value="dim" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">🟡 Đèn mờ (Suy hao Lux)</option>
-                <option value="out" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">🔴 Hỏng / Tắt nguồn</option>
-                <option value="unknown" className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">⚪ Chưa quét / Không rõ</option>
-              </select>
+              <label className="font-bold text-slate-700 dark:text-slate-300">Tủ / Lộ Feeder kết nối:</label>
+              <input
+                type="text"
+                value={feederId}
+                onChange={(e) => setFeederId(e.target.value)}
+                className="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-900 dark:text-slate-100 focus:outline-none"
+              />
             </div>
             <div className="space-y-1">
               <label className="font-bold text-slate-700 dark:text-slate-300">Bảo hành đến:</label>
@@ -158,30 +134,61 @@ export const EditPoleModal: React.FC<EditPoleModalProps> = ({
                 value={warrantyExpiry}
                 onChange={(e) => setWarrantyExpiry(e.target.value)}
                 className="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-900 dark:text-slate-100 focus:outline-none"
-              >
-              </input>
+              />
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className="font-bold text-slate-700 dark:text-slate-300">Tuyến Feeder kết nối:</label>
-            <input
-              type="text"
-              value={feederId}
-              onChange={(e) => setFeederId(e.target.value)}
-              className="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-900 dark:text-slate-100 focus:outline-none"
-            />
-          </div>
+          {/* Tọa độ WGS84 & Mini-Map */}
+          <div className="space-y-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between">
+              <label className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-amber-500" />
+                <span>Tọa độ Bản đồ GIS (WGS84):</span>
+              </label>
+            </div>
 
-          <div className="space-y-1">
-            <label className="font-bold text-slate-700 dark:text-slate-300">Mốc định vị thực tế (Atlas Landmark):</label>
-            <input
-              type="text"
-              value={atlas}
-              onChange={(e) => setAtlas(e.target.value)}
-              placeholder="VD: Gần quán cà phê, ngã ba..."
-              className="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none"
-            />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                  Kinh độ (Longitude - °E):
+                </span>
+                <input
+                  type="number"
+                  step="0.000001"
+                  value={lng}
+                  onChange={(e) => setLng(parseFloat(e.target.value) || 0)}
+                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:border-[#1f3864] dark:focus:border-blue-500"
+                />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                  Vĩ độ (Latitude - °N):
+                </span>
+                <input
+                  type="number"
+                  step="0.000001"
+                  value={lat}
+                  onChange={(e) => setLat(parseFloat(e.target.value) || 0)}
+                  className="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:border-[#1f3864] dark:focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* Interactive Mini Map */}
+            <div className="pt-1">
+              <LocationPickerMap
+                key={pole.pole_id || 'edit-picker'}
+                lat={lat}
+                lng={lng}
+                originalLat={pole.location?.lat || 10.9701}
+                originalLng={pole.location?.lng || 106.4896}
+                onChange={({ lat: newLat, lng: newLng }) => {
+                  setLat(newLat)
+                  setLng(newLng)
+                }}
+                height="230px"
+              />
+            </div>
           </div>
 
           {/* Footer Actions */}

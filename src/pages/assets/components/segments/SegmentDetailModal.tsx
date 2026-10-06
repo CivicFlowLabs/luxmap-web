@@ -1,22 +1,25 @@
 import React from 'react'
 import { createPortal } from 'react-dom'
-import { X, Route, MapPin, AlertCircle, CheckCircle2 } from 'lucide-react'
-import type { AssetSegmentItem } from '../AssetManagementPage'
+import { X, Route, MapPin, CheckCircle2, Edit3 } from 'lucide-react'
+import { SegmentRouteMap } from '../../../../components/SegmentRouteMap'
+import type { SegmentListItem } from '../../../../types/assets/segments'
 
 interface SegmentDetailModalProps {
-  segment: AssetSegmentItem | null
+  segment: SegmentListItem | null
   onClose: () => void
+  onOpenEdit?: (segment: SegmentListItem) => void
 }
 
 export const SegmentDetailModal: React.FC<SegmentDetailModalProps> = ({
   segment,
   onClose,
+  onOpenEdit,
 }) => {
   if (!segment) return null
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 w-full max-w-lg overflow-hidden animate-in zoom-in-95">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 w-full max-w-xl overflow-hidden animate-in zoom-in-95">
         {/* Header */}
         <div className="p-5 bg-gradient-to-r from-blue-700 to-indigo-700 dark:from-blue-900 dark:to-indigo-950 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -26,7 +29,7 @@ export const SegmentDetailModal: React.FC<SegmentDetailModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-mono text-xs bg-white/25 px-2 py-0.5 rounded-md font-bold">
-                  {segment.segment_id}
+                  {segment.external_ref}
                 </span>
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-900/40 text-blue-100">
                   {segment.road_class === 'inter_commune'
@@ -49,7 +52,7 @@ export const SegmentDetailModal: React.FC<SegmentDetailModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-4 text-xs text-slate-800 dark:text-slate-200">
+        <div className="p-6 space-y-4 text-xs text-slate-800 dark:text-slate-200 max-h-[75vh] overflow-y-auto">
           {/* 3 Metrics */}
           <div className="grid grid-cols-3 gap-2.5 text-center">
             <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl">
@@ -69,16 +72,12 @@ export const SegmentDetailModal: React.FC<SegmentDetailModalProps> = ({
             </div>
 
             <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl">
-              <div className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider">Trạng thái GIS</div>
+              <div className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider">Nguồn dữ liệu</div>
               <div className="text-lg font-black text-emerald-700 dark:text-emerald-400 mt-1 flex items-center justify-center gap-1">
-                {segment.has_active_fault ? (
-                  <span className="text-rose-600 dark:text-rose-400">Sự cố</span>
-                ) : (
-                  <span>Tốt</span>
-                )}
+                <span>{segment.data_source || 'GIS'}</span>
               </div>
               <div className="text-[10px] text-slate-400 dark:text-slate-500">
-                {segment.has_active_fault ? 'Cần kiểm tra' : '100% bình thường'}
+                Khảo sát thực địa
               </div>
             </div>
           </div>
@@ -90,7 +89,7 @@ export const SegmentDetailModal: React.FC<SegmentDetailModalProps> = ({
                 <MapPin className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" />
                 <span>Địa bàn quản lý:</span>
               </span>
-              <strong className="text-slate-800 dark:text-slate-200">{segment.commune_name}</strong>
+              <strong className="text-slate-800 dark:text-slate-200">{segment.commune_id || 'Củ Chi'}</strong>
             </div>
 
             <div className="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-700/60 pb-2">
@@ -101,32 +100,45 @@ export const SegmentDetailModal: React.FC<SegmentDetailModalProps> = ({
             </div>
 
             <div className="flex items-center justify-between pt-0.5">
-              <span className="text-slate-500 dark:text-slate-400">Tình trạng phân đoạn:</span>
-              <span className={`font-bold flex items-center gap-1.5 ${segment.has_active_fault ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
-                {segment.has_active_fault ? (
-                  <>
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    <span>Có phân đoạn báo lỗi</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Lưới điện vận hành ổn định</span>
-                  </>
-                )}
+              <span className="text-slate-500 dark:text-slate-400">Trạng thái cập nhật:</span>
+              <span className="font-bold flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>{segment.updated_at ? new Date(segment.updated_at).toLocaleDateString('vi-VN') : 'Mới cập nhật'}</span>
               </span>
             </div>
           </div>
 
+          {/* Bản đồ Tuyến đường Thực địa */}
+          <div className="space-y-1.5 pt-1">
+            <label className="font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between text-xs">
+              <span>Lộ trình Tuyến đường Chiếu sáng:</span>
+            </label>
+            <SegmentRouteMap
+              startCoord={[106.485, 10.972]}
+              endCoord={[106.495, 10.978]}
+              height="220px"
+            />
+          </div>
+
           {/* Actions */}
-          <div className="flex items-center justify-end pt-2">
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-transparent dark:border-slate-700 font-semibold rounded-xl transition cursor-pointer"
+              className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-transparent dark:border-slate-700 font-semibold rounded-xl text-xs transition cursor-pointer"
             >
               Đóng
             </button>
+            {onOpenEdit && (
+              <button
+                type="button"
+                onClick={() => onOpenEdit(segment)}
+                className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Chỉnh sửa</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -134,3 +146,4 @@ export const SegmentDetailModal: React.FC<SegmentDetailModalProps> = ({
     document.body
   )
 }
+export default SegmentDetailModal

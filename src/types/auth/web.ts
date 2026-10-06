@@ -1,4 +1,23 @@
-import type { ApiError, PaginationMeta, UserDto } from './common'
+/**
+ * Auto-generated Types for: auth/web
+ * Sinh tự động từ endpoint Backend
+ */
+export interface WebAuthTokenResponse {
+    accessToken?: string
+    access_token?: string | null
+    tokenType?: string
+    token_type?: string | null
+    expiresIn?: number
+    expires_in?: number
+}
+
+export interface WebLoginRequest {
+    username?: string | null
+    password?: string | null
+    rememberMe?: boolean
+    remember_me?: boolean
+    emailOrPhone?: string
+}
 
 export enum UserRole {
   ManagementAgency = 0,
@@ -20,22 +39,6 @@ export interface User {
   communeIds?: string[]
 }
 
-export interface WebAuthTokenResponse {
-  accessToken?: string
-  access_token?: string | null
-  tokenType?: string
-  token_type?: string | null
-  expiresIn?: number
-  expires_in?: number
-}
-
-export interface WebLoginRequest {
-  username: string
-  password: string
-  rememberMe?: boolean
-  remember_me?: boolean
-}
-
 export interface JwtPayloadClaims {
   sub: string
   role: string
@@ -46,11 +49,14 @@ export interface JwtPayloadClaims {
   aud?: string
 }
 
-export interface AuthResponse {
-  accessToken: string
-  refreshToken: string
-  expiresAt: string
-  user: User
+export interface AuthState {
+  user: User | null
+  isAuthenticated: boolean
+  accessToken?: string | null
+  refreshToken?: string | null
+  loading: boolean
+  isRefreshingProfile?: boolean
+  error: string | null
 }
 
 export interface LoginRequest {
@@ -59,18 +65,6 @@ export interface LoginRequest {
   rememberMe?: boolean
   username?: string
   remember_me?: boolean
-}
-
-export interface LogoutRequest {
-  refresh_token?: string | null
-}
-
-export interface RefreshRequest {
-  refresh_token?: string | null
-}
-
-export interface RefreshTokenRequest {
-  refreshToken: string
 }
 
 export interface RegisterRequest {
@@ -94,17 +88,6 @@ export interface RegisterResponse {
   message?: string | null
 }
 
-export interface AuthTokenResponse {
-  access_token?: string | null
-  refresh_token?: string | null
-  token_type?: string | null
-  expires_in?: number
-}
-
-export interface ApiErrorResponse {
-  error?: ApiError
-}
-
 export interface ApiResponse<T> {
   data: T | null
   error?: {
@@ -112,12 +95,6 @@ export interface ApiResponse<T> {
     message: string
     details?: Record<string, string[]>
   } | null
-}
-
-export interface AuthResponseApiResponse {
-  data?: AuthResponse
-  error?: ApiError
-  pagination?: PaginationMeta
 }
 
 export interface CurrentUserResponse {
@@ -128,15 +105,3 @@ export interface CurrentUserResponse {
   role: string
   commune_ids: string[]
 }
-
-export interface AuthState {
-  user: User | null
-  isAuthenticated: boolean
-  accessToken?: string | null
-  refreshToken?: string | null
-  loading: boolean
-  isRefreshingProfile?: boolean
-  error: string | null
-}
-
-export type { UserDto }

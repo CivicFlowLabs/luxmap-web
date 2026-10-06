@@ -11,51 +11,19 @@ import {
   AlertCircle,
   Zap,
 } from 'lucide-react'
-import { DatePicker } from '../../../components/DatePicker'
-
-export interface NewPoleData {
-  pole_id: string
-  lamp_code?: string
-  segment_id: string
-  segment_name: string
-  commune_id?: string
-  commune_name?: string
-  cabinet_id: string
-  cabinet_name?: string
-  feeder_id: string
-  lat: number
-  lng: number
-  lamp_watt: number
-  power_source: 'grid'
-  fixture_type: 'led_road_lamp'
-  warranty_expiry: string
-  near_sensitive_poi: boolean
-  atlas: string
-}
-
-export interface SegmentOption {
-  segment_id: string
-  segment_name: string
-  commune_name?: string
-  pole_count?: number
-}
-
-export interface CabinetOption {
-  cabinet_id: string
-  cabinet_name: string
-  feeder_id?: string
-  segment_id?: string
-  segment_ids?: string[]
-}
+import { DatePicker } from '../../../../components/DatePicker'
+import type { PoleListItem } from '../../../../types/assets/poles'
+import type { SegmentListItem } from '../../../../types/assets/segments'
+import type { FeederListItem } from '../../../../types/assets/feeders'
 
 interface AddPoleModalProps {
   isOpen: boolean
   onClose: () => void
-  onAddPole?: (data: NewPoleData) => void
-  onAddPoles: (poles: NewPoleData[]) => void
+  onAddPole?: (data: PoleListItem) => void
+  onAddPoles: (poles: PoleListItem[]) => void
   existingPoleCount: number
-  availableSegments?: SegmentOption[]
-  availableCabinets?: CabinetOption[]
+  availableSegments?: SegmentListItem[]
+  availableCabinets?: FeederListItem[]
 }
 
 interface PoleRowDraft {
@@ -68,10 +36,10 @@ interface PoleRowDraft {
   near_sensitive_poi: boolean
 }
 
-const DEFAULT_SEGMENTS: SegmentOption[] = [
-  { segment_id: 'SEG-001', segment_name: 'Tuyến A - Tỉnh Lộ 8', commune_name: 'Xã Phước Hậu', pole_count: 46 },
-  { segment_id: 'SEG-002', segment_name: 'Tuyến B - Nguyễn Văn Ni', commune_name: 'Xã Phước Hậu', pole_count: 31 },
-  { segment_id: 'SEG-003', segment_name: 'Tuyến C - Huỳnh Văn Cọ', commune_name: 'Xã Mỹ Hạnh Bắc', pole_count: 26 },
+const DEFAULT_SEGMENTS: SegmentListItem[] = [
+  { segment_id: 'SEG-001', external_ref: 'SEG-001', segment_name: 'Tuyến A - Tỉnh Lộ 8', road_class: 'inter_commune', length_m: 1200, commune_id: 'COM-001', data_source: 'field', pole_count: 46, updated_at: null },
+  { segment_id: 'SEG-002', external_ref: 'SEG-002', segment_name: 'Tuyến B - Nguyễn Văn Ni', road_class: 'inter_commune', length_m: 850, commune_id: 'COM-001', data_source: 'field', pole_count: 31, updated_at: null },
+  { segment_id: 'SEG-003', external_ref: 'SEG-003', segment_name: 'Tuyến C - Huỳnh Văn Cọ', road_class: 'inter_village', length_m: 720, commune_id: 'COM-001', data_source: 'field', pole_count: 26, updated_at: null },
 ]
 
 export const AddPoleModal: React.FC<AddPoleModalProps> = ({
@@ -83,7 +51,6 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
   availableSegments,
   availableCabinets,
 }) => {
-  // Segments & Cabinets list
   const segmentList = availableSegments && availableSegments.length > 0 ? availableSegments : DEFAULT_SEGMENTS
 
   // Top Section States
@@ -110,13 +77,8 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
 
   // Current active metadata
   const currentSegment = segmentList.find((s) => s.segment_id === selectedSegmentId)
-  const resolvedSegmentName = currentSegment?.segment_name || ''
-  const availableCabinetsOnSegment = (availableCabinets || []).filter(
-    (cab) =>
-      cab.segment_id === selectedSegmentId ||
-      (cab.segment_ids && cab.segment_ids.includes(selectedSegmentId))
-  )
-  const currentCabinet = availableCabinetsOnSegment.find((c) => c.cabinet_id === selectedCabinetId)
+  const availableCabinetsOnSegment = availableCabinets || []
+  const currentCabinet = availableCabinetsOnSegment.find((c) => c.feeder_id === selectedCabinetId)
 
   // Handle segment change: reset cabinet selection
   const handleSegmentChange = (newSegmentId: string) => {
@@ -160,7 +122,6 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
       const lastLat = parseFloat(lastRow.lat)
       const lastLng = parseFloat(lastRow.lng)
       if (!isNaN(lastLat) && !isNaN(lastLng)) {
-        // approximate ~30-35m spacing along line
         nextLat = (lastLat + 0.00028).toFixed(6)
         nextLng = (lastLng + 0.00025).toFixed(6)
       }
@@ -175,72 +136,76 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
       lat: nextLat,
       lng: nextLng,
       lamp_watt: 100,
-      atlas: `Trụ số ${rows.length + 1} thuộc ${currentCabinet?.cabinet_name || selectedCabinetId}`,
+      atlas: '',
       near_sensitive_poi: false,
     }
 
-    setRows((prev) => {
-      const updated = [...prev, newRow]
-      return updated.map((r, idx) => ({
-        ...r,
-        pole_id: `POLE-${String(existingPoleCount + idx + 1).padStart(4, '0')}`,
-      }))
-    })
+    setRows((prev) => [...prev, newRow])
   }
 
-  // Handler: Delete a Row & Re-sequence IDs
-  const handleDeleteRow = (rowIdToDelete: string) => {
-    setRows((prev) => {
-      const filtered = prev.filter((r) => r.rowId !== rowIdToDelete)
-      return filtered.map((r, idx) => ({
-        ...r,
-        pole_id: `POLE-${String(existingPoleCount + idx + 1).padStart(4, '0')}`,
+  // Auto-generate sequentially formatted IDs for all rows
+  const handleAutoFillIds = () => {
+    setErrorMsg(null)
+    const startNum = existingPoleCount + 1
+
+    setRows((prev) =>
+      prev.map((row, idx) => ({
+        ...row,
+        pole_id: `POLE-${String(startNum + idx).padStart(4, '0')}`,
       }))
-    })
+    )
   }
 
-  // Handler: Update Row Field
-  const handleUpdateRow = <K extends keyof PoleRowDraft>(rowId: string, field: K, value: PoleRowDraft[K]) => {
+  // Handler: Delete row
+  const handleDeleteRow = (rowId: string) => {
+    setRows((prev) => prev.filter((r) => r.rowId !== rowId))
+  }
+
+  // Handler: Update specific field in row
+  const handleUpdateRow = (rowId: string, field: keyof PoleRowDraft, value: any) => {
     setRows((prev) =>
       prev.map((r) => (r.rowId === rowId ? { ...r, [field]: value } : r))
     )
   }
 
-  // Handler: Final Submit & Batch Save
+  // Batch Submit Handler
   const handleBatchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMsg(null)
 
     if (!selectedSegmentId) {
-      setErrorMsg('Vui lòng chọn Tuyến đường áp dụng ở mục 1!')
+      setErrorMsg('Vui lòng chọn Tuyến đường áp dụng!')
       return
     }
 
     if (!selectedCabinetId) {
-      setErrorMsg('Vui lòng chọn Tủ điện điều khiển trực tiếp quản lý các cột đèn!')
+      setErrorMsg('Vui lòng chọn Tủ điện điều khiển trực tiếp quản lý các cột!')
       return
     }
 
     if (rows.length === 0) {
-      setErrorMsg('Danh sách đang trống. Vui lòng bấm "Thêm Cột Mới" để thêm ít nhất 1 cột đèn!')
+      setErrorMsg('Vui lòng bấm "+ Thêm Cột Mới" để khai báo ít nhất một cột đèn!')
       return
     }
 
-    // Validate rows
-    const seenIds = new Set<string>()
-    const validatedDataList: NewPoleData[] = []
+    // Validate each row
+    const idSet = new Set<string>()
+    const validatedDataList: PoleListItem[] = []
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]
-      const trimmedId = (
-        row.pole_id.trim() || `POLE-${String(existingPoleCount + i + 1).padStart(4, '0')}`
-      ).toUpperCase()
+      const trimmedId = row.pole_id.trim()
 
-      if (seenIds.has(trimmedId)) {
-        setErrorMsg(`Hàng #${i + 1}: Mã cột "${trimmedId}" bị trùng lặp trong danh sách!`)
+      if (!trimmedId) {
+        setErrorMsg(`Hàng #${i + 1}: Mã cột đèn không được để trống!`)
         return
       }
-      seenIds.add(trimmedId)
+
+      if (idSet.has(trimmedId.toLowerCase())) {
+        setErrorMsg(`Mã cột "${trimmedId}" bị trùng lặp trong danh sách khai báo!`)
+        return
+      }
+      idSet.add(trimmedId.toLowerCase())
 
       const parsedLat = parseFloat(row.lat)
       const parsedLng = parseFloat(row.lng)
@@ -257,20 +222,26 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
 
       validatedDataList.push({
         pole_id: trimmedId,
+        external_ref: trimmedId,
         segment_id: selectedSegmentId,
-        segment_name: resolvedSegmentName || selectedSegmentId,
-        commune_name: currentSegment?.commune_name,
-        cabinet_id: selectedCabinetId,
-        cabinet_name: currentCabinet?.cabinet_name,
-        feeder_id: currentCabinet?.feeder_id || `FDR-${selectedCabinetId}`,
-        lat: parsedLat,
-        lng: parsedLng,
-        lamp_watt: row.lamp_watt || 100,
-        power_source: 'grid',
-        fixture_type: 'led_road_lamp',
-        warranty_expiry: defaultWarranty || '2026-12-31',
+        feeder_id: selectedCabinetId,
+        commune_id: currentSegment?.commune_id || 'COM-001',
+        data_source: 'field',
         near_sensitive_poi: !!row.near_sensitive_poi,
-        atlas: row.atlas.trim() || `Trụ đèn thuộc ${currentCabinet?.cabinet_name || selectedCabinetId}`,
+        location: {
+          lat: parsedLat,
+          lng: parsedLng,
+        },
+        active_fixture: {
+          fixture_id: `FIX-${trimmedId}`,
+          fixture_type: 'led_road_lamp',
+          power_source: 'grid',
+          lamp_watt: row.lamp_watt || 100,
+          install_date: new Date().toISOString().split('T')[0],
+          warranty_expiry: defaultWarranty || '2026-12-31',
+          data_source: 'field',
+        },
+        updated_at: new Date().toISOString(),
       })
     }
 
@@ -295,10 +266,10 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
             </div>
             <div>
               <h3 className="font-bold text-white text-base">
-                Đăng Ký Danh Sách Cột Đèn Theo Tuyến
+                Thêm Cột Đèn Mới Vào Hệ Thống GIS
               </h3>
-              <p className="text-xs text-slate-200 dark:text-slate-400 mt-0.5">
-                Chọn tuyến đường, tủ điện điều khiển và khai báo hàng loạt danh sách cột đèn trực tiếp
+              <p className="text-xs text-slate-300">
+                Khai báo theo Tuyến đường và Tủ điện quản lý nguồn
               </p>
             </div>
           </div>
@@ -353,7 +324,7 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
                     -- Chọn tuyến đường áp dụng --
                   </option>
                   {segmentList.map((seg) => (
-                    <option key={seg.segment_id} value={seg.segment_id} className="text-slate-900 dark:text-slate-100">
+                    <option key={seg.segment_id || ''} value={seg.segment_id || ''} className="text-slate-900 dark:text-slate-100">
                       {seg.segment_name} ({seg.segment_id} • {seg.pole_count || 0} cột)
                     </option>
                   ))}
@@ -387,8 +358,8 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
                       : '-- Vui lòng chọn Tuyến trước --'}
                   </option>
                   {availableCabinetsOnSegment.map((cab) => (
-                    <option key={cab.cabinet_id} value={cab.cabinet_id} className="text-slate-900 dark:text-slate-100">
-                      ⚡️ {cab.cabinet_name} ({cab.cabinet_id})
+                    <option key={cab.feeder_id || ''} value={cab.feeder_id || ''} className="text-slate-900 dark:text-slate-100">
+                      ⚡️ {cab.feeder_name || cab.feeder_id} ({cab.feeder_id})
                     </option>
                   ))}
                 </select>
@@ -424,7 +395,7 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
                 {currentCabinet && (
                   <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1">
                     <Zap className="w-3 h-3 text-indigo-500" />
-                    <span>{currentCabinet.cabinet_name}</span>
+                    <span>{currentCabinet.feeder_name || currentCabinet.feeder_id}</span>
                   </span>
                 )}
               </div>
@@ -445,117 +416,115 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
             <div className="border border-slate-200 dark:border-slate-700/80 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-2xs">
               <div className="overflow-x-auto max-h-72">
                 <table className="w-full text-left border-collapse text-xs">
-                  <thead className="bg-slate-100/90 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 sticky top-0 z-10 font-bold border-b border-slate-200 dark:border-slate-700">
+                  <thead className="bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-bold sticky top-0 z-10 border-b border-slate-200 dark:border-slate-700 shadow-2xs">
                     <tr>
-                      <th className="py-2.5 px-3 w-10 text-center">#</th>
-                      <th className="py-2.5 px-3 w-60">Tọa Độ GPS (Vĩ độ / Kinh độ)</th>
-                      <th className="py-2.5 px-3 w-28">Công Suất</th>
-                      <th className="py-2.5 px-3">Ghi Chú Mốc Thực Địa (Atlas)</th>
-                      <th className="py-2.5 px-3 w-20 text-center">Khu Nhạy Cảm</th>
-                      <th className="py-2.5 px-3 w-12 text-center">Xóa</th>
+                      <th className="py-2.5 px-3 w-12 text-center">STT</th>
+                      <th className="py-2.5 px-3 min-w-36">
+                        <div className="flex items-center justify-between gap-1">
+                          <span>Mã Cột Đèn (*)</span>
+                          {rows.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={handleAutoFillIds}
+                              className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer"
+                              title="Tự động sinh mã POLE-xxxx liên tục"
+                            >
+                              (Tự sinh)
+                            </button>
+                          )}
+                        </div>
+                      </th>
+                      <th className="py-2.5 px-3 min-w-28">Kinh độ (Lng) (*)</th>
+                      <th className="py-2.5 px-3 min-w-28">Vĩ độ (Lat) (*)</th>
+                      <th className="py-2.5 px-3 min-w-24">Công suất (W)</th>
+                      <th className="py-2.5 px-3 min-w-28 text-center">Nhạy cảm (POI)</th>
+                      <th className="py-2.5 px-3 min-w-32">Ghi chú vị trí</th>
+                      <th className="py-2.5 px-3 w-14 text-center">Xóa</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
                     {rows.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-8 text-center text-slate-400 dark:text-slate-500">
-                          <div className="flex flex-col items-center justify-center gap-2">
-                            <Layers className="w-8 h-8 text-slate-300 dark:text-slate-600 stroke-[1.5]" />
-                            <p className="font-medium text-xs">Chưa có cột đèn nào trong danh sách.</p>
-                            <p className="text-[11px] text-slate-400">
-                              Chọn Tuyến đường, Tủ điện ở trên và bấm <strong className="text-emerald-600 font-bold">"+ Thêm Cột Mới"</strong> để bắt đầu khai báo.
-                            </p>
-                          </div>
+                        <td colSpan={8} className="py-10 text-center text-slate-400 dark:text-slate-500">
+                          Chưa có cột đèn nào trong danh sách. Bấm{' '}
+                          <button
+                            type="button"
+                            onClick={handleAddRow}
+                            className="text-emerald-600 dark:text-emerald-400 font-bold underline cursor-pointer"
+                          >
+                            + Thêm Cột Mới
+                          </button>{' '}
+                          để bắt đầu.
                         </td>
                       </tr>
                     ) : (
                       rows.map((row, index) => (
-                        <tr
-                          key={row.rowId}
-                          className="hover:bg-slate-50/70 dark:hover:bg-slate-800/60 transition-colors duration-100 group"
-                        >
-                          {/* Row Index */}
-                          <td className="py-2 px-3 text-center text-slate-400 dark:text-slate-500 font-mono text-[11px]">
+                        <tr key={row.rowId} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition">
+                          <td className="py-2 px-3 text-center text-slate-400 font-bold">
                             {index + 1}
                           </td>
-
-                          {/* Lat / Lng */}
                           <td className="py-2 px-3">
-                            <div className="flex items-center gap-1.5">
-                              <div className="relative flex-1">
-                                <span className="absolute left-2 top-2 text-[9px] font-bold text-slate-400 select-none">
-                                  Lat
-                                </span>
-                                <input
-                                  type="text"
-                                  value={row.lat}
-                                  onChange={(e) => handleUpdateRow(row.rowId, 'lat', e.target.value)}
-                                  placeholder="10.9715"
-                                  className="w-full pl-7 pr-2 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600 rounded-lg font-mono text-[11.5px] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-150"
-                                />
-                              </div>
-                              <div className="relative flex-1">
-                                <span className="absolute left-2 top-2 text-[9px] font-bold text-slate-400 select-none">
-                                  Lng
-                                </span>
-                                <input
-                                  type="text"
-                                  value={row.lng}
-                                  onChange={(e) => handleUpdateRow(row.rowId, 'lng', e.target.value)}
-                                  placeholder="106.4925"
-                                  className="w-full pl-7 pr-2 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600 rounded-lg font-mono text-[11.5px] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-150"
-                                />
-                              </div>
-                            </div>
+                            <input
+                              type="text"
+                              value={row.pole_id}
+                              onChange={(e) => handleUpdateRow(row.rowId, 'pole_id', e.target.value)}
+                              placeholder={`POLE-${String(existingPoleCount + index + 1).padStart(4, '0')}`}
+                              className="w-full p-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg font-mono text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:border-[#1f3864]"
+                            />
                           </td>
-
-                          {/* Wattage */}
+                          <td className="py-2 px-3">
+                            <input
+                              type="text"
+                              value={row.lng}
+                              onChange={(e) => handleUpdateRow(row.rowId, 'lng', e.target.value)}
+                              placeholder="106.4896"
+                              className="w-full p-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg font-mono text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-[#1f3864]"
+                            />
+                          </td>
+                          <td className="py-2 px-3">
+                            <input
+                              type="text"
+                              value={row.lat}
+                              onChange={(e) => handleUpdateRow(row.rowId, 'lat', e.target.value)}
+                              placeholder="10.9701"
+                              className="w-full p-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg font-mono text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-[#1f3864]"
+                            />
+                          </td>
                           <td className="py-2 px-3">
                             <select
                               value={row.lamp_watt}
                               onChange={(e) => handleUpdateRow(row.rowId, 'lamp_watt', Number(e.target.value))}
-                              className="w-full p-1.5 bg-white dark:bg-slate-950 border border-slate-200 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600 rounded-lg text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#1f3864]/20 focus:border-[#1f3864] cursor-pointer transition-all duration-150"
+                              className="w-full p-1.5 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer"
                             >
                               <option value={50}>50W</option>
                               <option value={60}>60W</option>
                               <option value={100}>100W</option>
                               <option value={120}>120W</option>
                               <option value={150}>150W</option>
-                              <option value={200}>200W</option>
                             </select>
                           </td>
-
-                          {/* Atlas Landmark */}
+                          <td className="py-2 px-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={row.near_sensitive_poi}
+                              onChange={(e) => handleUpdateRow(row.rowId, 'near_sensitive_poi', e.target.checked)}
+                              className="w-4 h-4 rounded text-blue-600 cursor-pointer"
+                            />
+                          </td>
                           <td className="py-2 px-3">
                             <input
                               type="text"
                               value={row.atlas}
                               onChange={(e) => handleUpdateRow(row.rowId, 'atlas', e.target.value)}
-                              placeholder="Mốc thực tế: đối diện nhà số X..."
-                              className="w-full p-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-150"
+                              placeholder="Gần ngã 3..."
+                              className="w-full p-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 focus:outline-none"
                             />
                           </td>
-
-                          {/* Sensitive POI */}
-                          <td className="py-2 px-3 text-center">
-                            <input
-                              type="checkbox"
-                              checked={row.near_sensitive_poi}
-                              onChange={(e) =>
-                                handleUpdateRow(row.rowId, 'near_sensitive_poi', e.target.checked)
-                              }
-                              className="w-4 h-4 rounded text-[#1f3864] accent-[#1f3864] hover:scale-110 transition-transform cursor-pointer"
-                              title="Gần trường học, bệnh viện..."
-                            />
-                          </td>
-
-                          {/* Delete Button per row */}
                           <td className="py-2 px-3 text-center">
                             <button
                               type="button"
                               onClick={() => handleDeleteRow(row.rowId)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 hover:scale-110 active:scale-90 transition-all duration-150 cursor-pointer"
-                              title="Xóa cột này khỏi danh sách"
+                              className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition cursor-pointer"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -569,26 +538,21 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
             </div>
           </div>
 
-          {/* Modal Footer */}
-          <div className="p-4 -mx-5 -mb-5 mt-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/60 backdrop-blur-xs flex items-center justify-end gap-2.5 shrink-0">
+          {/* Footer Actions */}
+          <div className="p-4 -mx-5 -mb-5 mt-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 flex justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300 font-semibold rounded-xl text-xs hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-95 transition-all duration-150 cursor-pointer shadow-2xs"
+              className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-xl text-xs hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer"
             >
               Hủy bỏ
             </button>
             <button
               type="submit"
-              disabled={rows.length === 0}
-              className={`px-6 py-2.5 font-bold rounded-xl text-xs shadow-xs hover:shadow-md active:scale-95 transition-all duration-200 flex items-center gap-2 ${
-                rows.length > 0
-                  ? 'bg-gradient-to-r from-[#172b4d] to-[#25457a] hover:from-[#1f3864] hover:to-[#2e5596] text-white hover:shadow-blue-950/25 cursor-pointer'
-                  : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
-              }`}
+              className="px-5 py-2 bg-[#1f3864] dark:bg-blue-600 hover:bg-[#1f3864]/90 dark:hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-xs transition flex items-center gap-1.5 cursor-pointer"
             >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Lưu Danh Sách Cột</span>
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Xác Nhận Lưu ({rows.length} Cột)</span>
             </button>
           </div>
         </form>

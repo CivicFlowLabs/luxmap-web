@@ -10,45 +10,9 @@ import {
   PlusCircle,
   Cpu,
 } from 'lucide-react'
-import { DatePicker } from '../../../components/DatePicker'
-
-export interface SegmentOption {
-  segment_id: string
-  segment_name: string
-  commune_name?: string
-  pole_count?: number
-}
-
-export interface CabinetOption {
-  id?: string
-  cabinet_id: string
-  cabinet_name: string
-  feeder_id?: string
-  segment_id?: string
-  segment_ids?: string[]
-  segment_name?: string
-  voltage_v?: number
-  current_load_kw?: number
-  power_factor?: number
-  lat?: number
-  lng?: number
-  landmark_note?: string
-}
-
-export interface NewCabinetData {
-  cabinet_id: string
-  cabinet_name: string
-  feeder_id: string
-  segment_id: string
-  segment_name: string
-  voltage_v: number
-  current_load_kw: number
-  total_poles_managed: number
-  landmark_note: string
-  lat: number
-  lng: number
-  installed_at: string
-}
+import { DatePicker } from '../../../../components/DatePicker'
+import type { FeederListItem } from '../../../../types/assets/feeders'
+import type { SegmentListItem } from '../../../../types/assets/segments'
 
 interface CabinetRowDraft {
   rowId: string
@@ -64,17 +28,17 @@ interface CabinetRowDraft {
 interface AddCabinetModalProps {
   isOpen: boolean
   onClose: () => void
-  onAddCabinet?: (data: NewCabinetData) => void
-  onAddCabinets?: (cabinets: NewCabinetData[]) => void
+  onAddCabinet?: (data: FeederListItem) => void
+  onAddCabinets?: (cabinets: FeederListItem[]) => void
   existingCount: number
-  availableSegments?: SegmentOption[]
-  availableCabinets?: CabinetOption[]
+  availableSegments?: SegmentListItem[]
+  availableCabinets?: FeederListItem[]
 }
 
-const DEFAULT_SEGMENTS: SegmentOption[] = [
-  { segment_id: 'SEG-001', segment_name: 'Tuyến A - Tỉnh Lộ 8', commune_name: 'Xã Phước Hậu', pole_count: 46 },
-  { segment_id: 'SEG-002', segment_name: 'Tuyến B - Nguyễn Văn Ni', commune_name: 'Xã Phước Hậu', pole_count: 31 },
-  { segment_id: 'SEG-003', segment_name: 'Tuyến C - Huỳnh Văn Cọ', commune_name: 'Xã Mỹ Hạnh Bắc', pole_count: 26 },
+const DEFAULT_SEGMENTS: SegmentListItem[] = [
+  { segment_id: 'SEG-001', external_ref: 'SEG-001', segment_name: 'Tuyến A - Tỉnh Lộ 8', road_class: 'inter_commune', length_m: 1200, commune_id: 'COM-001', data_source: 'field', pole_count: 46, updated_at: null },
+  { segment_id: 'SEG-002', external_ref: 'SEG-002', segment_name: 'Tuyến B - Nguyễn Văn Ni', road_class: 'inter_commune', length_m: 850, commune_id: 'COM-001', data_source: 'field', pole_count: 31, updated_at: null },
+  { segment_id: 'SEG-003', external_ref: 'SEG-003', segment_name: 'Tuyến C - Huỳnh Văn Cọ', road_class: 'inter_village', length_m: 720, commune_id: 'COM-001', data_source: 'field', pole_count: 26, updated_at: null },
 ]
 
 export const AddCabinetModal: React.FC<AddCabinetModalProps> = ({
@@ -82,7 +46,7 @@ export const AddCabinetModal: React.FC<AddCabinetModalProps> = ({
   onClose,
   onAddCabinet,
   onAddCabinets,
-  existingCount,
+  existingCount: _existingCount,
   availableSegments,
   availableCabinets = [],
 }) => {
@@ -115,14 +79,42 @@ export const AddCabinetModal: React.FC<AddCabinetModalProps> = ({
     }
   }
 
-  // Handle segment change
+  // Handle Segment Change: recalculate IDs
   const handleSegmentChange = (newSegmentId: string) => {
     setSelectedSegmentId(newSegmentId)
-    setRows([])
     setErrorMsg(null)
+
+    const seg = segmentList.find((s) => s.segment_id === newSegmentId)
+    const segName = seg?.segment_name || newSegmentId
+
+    let segCode = 'TL8'
+    if (segName.includes('Nguyễn Văn Ni') || newSegmentId.includes('002')) segCode = 'NVN'
+    else if (segName.includes('Huỳnh Văn Cọ') || newSegmentId.includes('003')) segCode = 'HVC'
+
+    setRows((prev) =>
+      prev.map((row, idx) => {
+        const letter = String.fromCharCode(65 + idx)
+        return {
+          ...row,
+          cabinet_id: `CAB-${segCode}-${letter}`,
+          cabinet_name: `Tủ ${letter} - ${segName}`,
+        }
+      })
+    )
   }
 
-  // Handle Add Cabinet Row (Auto-generates ID & Name, starts clean for GPS and note)
+  // Reset when open
+  useEffect(() => {
+    if (isOpen) {
+      setErrorMsg(null)
+      setSelectedSegmentId('')
+      setRows([])
+    }
+  }, [isOpen])
+
+  if (!isOpen) return null
+
+  // Add Row
   const handleAddRow = () => {
     setErrorMsg(null)
 
@@ -131,57 +123,53 @@ export const AddCabinetModal: React.FC<AddCabinetModalProps> = ({
       return
     }
 
-    const nextIdx = rows.length
-    const segCabsCount = (availableCabinets || []).filter((c) => c.segment_id === selectedSegmentId).length
-    const letter = String.fromCharCode(65 + segCabsCount + nextIdx)
-    const segSuffix = selectedSegmentId.replace(/^SEG-0*/, '')
-    const autoCabId = `CAB-TL${segSuffix}-${letter}`
-    const defaultName = resolvedSegmentName
-      ? `Tủ ${letter} - ${resolvedSegmentName.split(' - ')[1] || resolvedSegmentName}`
-      : `Tủ ${letter}`
+    const nextIndex = rows.length
+    const letter = String.fromCharCode(65 + (nextIndex % 26))
 
-    const newRow: CabinetRowDraft = {
+    let segCode = 'TL8'
+    if (resolvedSegmentName.includes('Nguyễn Văn Ni') || selectedSegmentId.includes('002')) segCode = 'NVN'
+    else if (resolvedSegmentName.includes('Huỳnh Văn Cọ') || selectedSegmentId.includes('003')) segCode = 'HVC'
+
+    const autoCabinetId = `CAB-${segCode}-${letter}`
+    const autoCabinetName = `Tủ ${letter} - ${resolvedSegmentName || selectedSegmentId}`
+
+    let baseLat = 10.9701
+    let baseLng = 106.4896
+    if (rows.length > 0) {
+      const lastRow = rows[rows.length - 1]
+      const lLat = parseFloat(lastRow.lat)
+      const lLng = parseFloat(lastRow.lng)
+      if (!isNaN(lLat) && !isNaN(lLng)) {
+        baseLat = lLat + 0.002
+        baseLng = lLng + 0.002
+      }
+    }
+
+    const newDraft: CabinetRowDraft = {
       rowId: `cab-row-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      cabinet_id: autoCabId,
-      cabinet_name: defaultName,
+      cabinet_id: autoCabinetId,
+      cabinet_name: autoCabinetName,
       voltage_v: 220,
       current_load_kw: '10.0',
-      lat: '',
-      lng: '',
+      lat: baseLat.toFixed(4),
+      lng: baseLng.toFixed(4),
       landmark_note: '',
     }
 
-    setRows((prev) => [...prev, newRow])
+    setRows((prev) => [...prev, newDraft])
   }
 
-  // Handle Delete Row
-  const handleDeleteRow = (rowIdToDelete: string) => {
-    setRows((prev) => prev.filter((r) => r.rowId !== rowIdToDelete))
+  const handleDeleteRow = (rowId: string) => {
+    setRows((prev) => prev.filter((r) => r.rowId !== rowId))
   }
 
-  // Handle Update Row Field
-  const handleUpdateRow = <K extends keyof CabinetRowDraft>(
-    rowId: string,
-    field: K,
-    value: CabinetRowDraft[K]
-  ) => {
+  const handleUpdateRow = (rowId: string, field: keyof CabinetRowDraft, value: any) => {
     setRows((prev) =>
       prev.map((r) => (r.rowId === rowId ? { ...r, [field]: value } : r))
     )
   }
 
-  // Reset form when opening modal
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedSegmentId('')
-      setRows([])
-      setErrorMsg(null)
-    }
-  }, [isOpen, existingCount])
-
-  if (!isOpen) return null
-
-  // Handle Final Submit
+  // Submit Handler
   const handleFinalSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMsg(null)
@@ -192,52 +180,56 @@ export const AddCabinetModal: React.FC<AddCabinetModalProps> = ({
     }
 
     if (rows.length === 0) {
-      setErrorMsg('Danh sách tủ đang trống. Vui lòng bấm "+ Thêm Tủ Điện" để thêm ít nhất 1 tủ điện!')
+      setErrorMsg('Vui lòng bấm "+ Thêm Tủ Điện" để thêm ít nhất một tủ điện vào tuyến!')
       return
     }
 
-    const cabinetsToSave: NewCabinetData[] = []
-    const segCabsCount = (availableCabinets || []).filter((c) => c.segment_id === selectedSegmentId).length
+    const idSet = new Set<string>()
+    const cabinetsToSave: FeederListItem[] = []
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]
-      const letter = String.fromCharCode(65 + segCabsCount + i)
-      const segSuffix = selectedSegmentId.replace(/^SEG-0*/, '')
-      const autoId = `CAB-TL${segSuffix}-${letter}`
-      const trimmedName = row.cabinet_name.trim() || `Tủ ${letter}`
+      const trimmedName = row.cabinet_name.trim()
+      const autoId = row.cabinet_id.trim()
+
+      if (!trimmedName) {
+        setErrorMsg(`Hàng #${i + 1}: Tên tủ điện không được để trống!`)
+        return
+      }
+
+      if (idSet.has(autoId.toLowerCase())) {
+        setErrorMsg(`Mã tủ "${autoId}" bị trùng lặp trong đợt thêm này!`)
+        return
+      }
+      idSet.add(autoId.toLowerCase())
+
+      const alreadyExists = availableCabinets.some(
+        (c) => c.feeder_id && c.feeder_id.toLowerCase() === autoId.toLowerCase()
+      )
+      if (alreadyExists) {
+        setErrorMsg(`Mã tủ điện "${autoId}" đã tồn tại trên hệ thống GIS! Vui lòng chọn ký hiệu khác!`)
+        return
+      }
 
       const parsedLat = parseFloat(row.lat)
       const parsedLng = parseFloat(row.lng)
 
       if (isNaN(parsedLat) || isNaN(parsedLng)) {
-        setErrorMsg(`Hàng #${i + 1} (${trimmedName}): Vui lòng nhập Tọa độ GPS (Vĩ độ và Kinh độ)!`)
+        setErrorMsg(`Hàng #${i + 1} (${trimmedName}): Vui lòng nhập Tọa độ GPS hợp lệ!`)
         return
       }
-
-      if (parsedLat < -90 || parsedLat > 90 || parsedLng < -180 || parsedLng > 180) {
-        setErrorMsg(`Hàng #${i + 1} (${trimmedName}): Tọa độ GPS vượt quá phạm vi địa lý hợp lệ!`)
-        return
-      }
-
-      const feederId = `FDR-TL${segSuffix}-${letter}`
 
       cabinetsToSave.push({
-        cabinet_id: autoId,
-        cabinet_name: trimmedName,
-        feeder_id: feederId,
-        segment_id: selectedSegmentId,
-        segment_name: resolvedSegmentName || selectedSegmentId,
-        voltage_v: row.voltage_v || 220,
-        current_load_kw: parseFloat(row.current_load_kw) || 10.0,
-        total_poles_managed: 0,
-        landmark_note: row.landmark_note.trim() || `Bệ tủ vỉa hè ${trimmedName} trên tuyến ${resolvedSegmentName}`,
-        lat: parsedLat,
-        lng: parsedLng,
-        installed_at: installedDateStr || new Date().toISOString().split('T')[0],
+        feeder_id: autoId,
+        external_ref: autoId,
+        feeder_name: trimmedName,
+        commune_id: currentSegment?.commune_id || 'COM-001',
+        has_geometry: !isNaN(parsedLat) && !isNaN(parsedLng),
+        pole_count: 0,
+        updated_at: new Date().toISOString(),
       })
     }
 
-    // Dispatch saving
     if (onAddCabinets) {
       onAddCabinets(cabinetsToSave)
     } else if (onAddCabinet && cabinetsToSave.length > 0) {
@@ -251,7 +243,7 @@ export const AddCabinetModal: React.FC<AddCabinetModalProps> = ({
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in select-none">
       <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-purple-100 dark:border-purple-900/40 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden animate-in zoom-in-95">
         
-        {/* Header Modal - Distinctive Technical Purple / Indigo Theme */}
+        {/* Header Modal */}
         <div className="p-5 bg-gradient-to-r from-[#2e1065] via-[#4c1d95] to-[#581c87] text-white flex items-center justify-between shadow-md shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/20">
@@ -262,7 +254,7 @@ export const AddCabinetModal: React.FC<AddCabinetModalProps> = ({
                 Khai Báo Danh Sách Tủ Điện Điều Khiển Tuyến
               </h3>
               <p className="text-xs text-purple-200 mt-0.5">
-                Thiết lập các tủ điện cấp nguồn trên tuyến đường (Mỗi tủ cấp nguồn cho 1 tuyến điện độc lập)
+                Thiết lập các tủ điện cấp nguồn trên tuyến đường (Chuẩn FeederListItem)
               </p>
             </div>
           </div>
@@ -317,7 +309,7 @@ export const AddCabinetModal: React.FC<AddCabinetModalProps> = ({
                     -- Chọn tuyến đường áp dụng --
                   </option>
                   {segmentList.map((seg) => (
-                    <option key={seg.segment_id} value={seg.segment_id} className="text-slate-900 dark:text-slate-100">
+                    <option key={seg.segment_id || ''} value={seg.segment_id || ''} className="text-slate-900 dark:text-slate-100">
                       {seg.segment_name} ({seg.segment_id} • {seg.pole_count || 0} cột)
                     </option>
                   ))}
@@ -404,35 +396,28 @@ export const AddCabinetModal: React.FC<AddCabinetModalProps> = ({
                           key={row.rowId}
                           className="hover:bg-purple-50/30 dark:hover:bg-purple-950/20 transition-colors duration-100 group"
                         >
-                          {/* Row Index */}
                           <td className="py-2 px-3 text-center text-purple-600 dark:text-purple-400 font-mono text-[11px]">
                             {index + 1}
                           </td>
-
-                          {/* Cabinet Name */}
                           <td className="py-2 px-3">
                             <input
                               type="text"
                               value={row.cabinet_name}
                               onChange={(e) => handleUpdateRow(row.rowId, 'cabinet_name', e.target.value)}
                               placeholder="Tủ A - Tỉnh Lộ 8"
-                              className="w-full p-1.5 bg-slate-50 dark:bg-slate-950 border border-purple-200 hover:border-purple-300 dark:border-purple-900 dark:hover:border-purple-800 rounded-lg text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-150"
+                              className="w-full p-1.5 bg-slate-50 dark:bg-slate-950 border border-purple-200 hover:border-purple-300 dark:border-purple-900 rounded-lg text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none"
                             />
                           </td>
-
-                          {/* Voltage */}
                           <td className="py-2 px-3">
                             <select
                               value={row.voltage_v}
                               onChange={(e) => handleUpdateRow(row.rowId, 'voltage_v', Number(e.target.value))}
-                              className="w-full p-1.5 bg-white dark:bg-slate-950 border border-purple-200 hover:border-purple-300 dark:border-purple-900 rounded-lg text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 cursor-pointer"
+                              className="w-full p-1.5 bg-white dark:bg-slate-950 border border-purple-200 dark:border-purple-900 rounded-lg text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer"
                             >
                               <option value={220}>220V</option>
                               <option value={380}>380V</option>
                             </select>
                           </td>
-
-                          {/* Load kW */}
                           <td className="py-2 px-3">
                             <input
                               type="number"
@@ -440,58 +425,41 @@ export const AddCabinetModal: React.FC<AddCabinetModalProps> = ({
                               value={row.current_load_kw}
                               onChange={(e) => handleUpdateRow(row.rowId, 'current_load_kw', e.target.value)}
                               placeholder="10.5"
-                              className="w-full p-1.5 bg-slate-50 dark:bg-slate-950 border border-purple-200 hover:border-purple-300 dark:border-purple-900 rounded-lg font-mono text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                              className="w-full p-1.5 bg-slate-50 dark:bg-slate-950 border border-purple-200 dark:border-purple-900 rounded-lg font-mono text-xs text-slate-900 dark:text-slate-100 focus:outline-none"
                             />
                           </td>
-
-                          {/* Lat / Lng */}
                           <td className="py-2 px-3">
                             <div className="flex items-center gap-1.5">
-                              <div className="relative flex-1">
-                                <span className="absolute left-2 top-2 text-[9px] font-bold text-slate-400 select-none">
-                                  Lat
-                                </span>
-                                <input
-                                  type="text"
-                                  value={row.lat}
-                                  onChange={(e) => handleUpdateRow(row.rowId, 'lat', e.target.value)}
-                                  placeholder="10.9701"
-                                  className="w-full pl-7 pr-2 py-1.5 bg-slate-50 dark:bg-slate-950 border border-purple-200 hover:border-purple-300 dark:border-purple-900 rounded-lg font-mono text-[11.5px] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
-                                />
-                              </div>
-                              <div className="relative flex-1">
-                                <span className="absolute left-2 top-2 text-[9px] font-bold text-slate-400 select-none">
-                                  Lng
-                                </span>
-                                <input
-                                  type="text"
-                                  value={row.lng}
-                                  onChange={(e) => handleUpdateRow(row.rowId, 'lng', e.target.value)}
-                                  placeholder="106.4896"
-                                  className="w-full pl-7 pr-2 py-1.5 bg-slate-50 dark:bg-slate-950 border border-purple-200 hover:border-purple-300 dark:border-purple-900 rounded-lg font-mono text-[11.5px] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
-                                />
-                              </div>
+                              <input
+                                type="text"
+                                value={row.lat}
+                                onChange={(e) => handleUpdateRow(row.rowId, 'lat', e.target.value)}
+                                placeholder="10.9701"
+                                className="w-full p-1.5 bg-slate-50 dark:bg-slate-950 border border-purple-200 dark:border-purple-900 rounded-lg font-mono text-xs text-slate-900 dark:text-slate-100 focus:outline-none"
+                              />
+                              <input
+                                type="text"
+                                value={row.lng}
+                                onChange={(e) => handleUpdateRow(row.rowId, 'lng', e.target.value)}
+                                placeholder="106.4896"
+                                className="w-full p-1.5 bg-slate-50 dark:bg-slate-950 border border-purple-200 dark:border-purple-900 rounded-lg font-mono text-xs text-slate-900 dark:text-slate-100 focus:outline-none"
+                              />
                             </div>
                           </td>
-
-                          {/* Landmark Note */}
                           <td className="py-2 px-3">
                             <input
                               type="text"
                               value={row.landmark_note}
                               onChange={(e) => handleUpdateRow(row.rowId, 'landmark_note', e.target.value)}
                               placeholder="Mốc thực tế: ngã ba..."
-                              className="w-full p-1.5 bg-slate-50 dark:bg-slate-950 border border-purple-200 hover:border-purple-300 dark:border-purple-900 rounded-lg text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                              className="w-full p-1.5 bg-slate-50 dark:bg-slate-950 border border-purple-200 dark:border-purple-900 rounded-lg text-xs text-slate-900 dark:text-slate-100 focus:outline-none"
                             />
                           </td>
-
-                          {/* Delete Button */}
                           <td className="py-2 px-3 text-center">
                             <button
                               type="button"
                               onClick={() => handleDeleteRow(row.rowId)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 hover:scale-110 active:scale-90 transition-all duration-150 cursor-pointer"
-                              title="Xóa tủ này"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 transition cursor-pointer"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -510,17 +478,17 @@ export const AddCabinetModal: React.FC<AddCabinetModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600 text-slate-700 dark:text-slate-300 font-semibold rounded-xl text-xs hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-95 transition-all duration-150 cursor-pointer shadow-2xs"
+              className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 text-slate-700 dark:text-slate-300 font-semibold rounded-xl text-xs hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer shadow-2xs"
             >
               Hủy bỏ
             </button>
             <button
               type="submit"
               disabled={rows.length === 0}
-              className={`px-6 py-2.5 font-bold rounded-xl text-xs shadow-xs hover:shadow-md active:scale-95 transition-all duration-200 flex items-center gap-2 ${
+              className={`px-6 py-2.5 font-bold rounded-xl text-xs shadow-xs transition flex items-center gap-2 ${
                 rows.length > 0
-                  ? 'bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white hover:shadow-purple-950/25 cursor-pointer'
-                  : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                  ? 'bg-gradient-to-r from-purple-700 to-indigo-700 text-white cursor-pointer'
+                  : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
               }`}
             >
               <CheckCircle2 className="w-4 h-4" />

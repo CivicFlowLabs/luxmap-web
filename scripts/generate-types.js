@@ -27,7 +27,7 @@ if (fs.existsSync(envPath)) {
 const baseUrl = process.env.VITE_API_URL || process.env.API_URL || 'http://localhost:5141'
 const swaggerUrl = baseUrl.endsWith('.json') ? baseUrl : `${baseUrl.replace(/\/$/, '')}/swagger/v1/swagger.json`
 
-console.log('🚀 [1/2] Đang lấy Swagger Schema từ: ' + swaggerUrl + '...')
+console.log('🚀 [1/3] Đang lấy Swagger Schema từ: ' + swaggerUrl + '...')
 
 function fetchJson(url) {
     return new Promise((resolve, reject) => {
@@ -47,7 +47,7 @@ function fetchJson(url) {
             })
         })
         req.on('error', (err) => {
-            reject(new Error(`Không thể kết nối tới Backend tại ${url}. Hãy chắc chắn Backend đang chạy (bấm Ctrl + F5 trong Visual Studio)! (${err.message})`))
+            reject(new Error(`Không thể kết nối tới Backend tại ${url}. Hãy chắc chắn Backend đang chạy! (${err.message})`))
         })
     })
 }
@@ -112,50 +112,148 @@ function generateInterface(name, schema) {
     return code
 }
 
+// Router phân loại Endpoint thành { folder, file }
+function routeEndpoint(epPath, op) {
+    const client = op['x-luxmap-client']
+    const summary = op.summary || ''
+
+    // 🔴 LỌC BỎ 100% CÁC API DÀNH RIÊNG CHO MOBILE
+    if (client === 'mobile' || summary.startsWith('[Mobile]')) {
+        return null
+    }
+
+    const stripped = epPath.replace(/^\/api\/(?:v\d+\/)?/i, '')
+    const segments = stripped.split('/').filter(Boolean)
+
+    let folder = segments[0] || 'common'
+    let file = segments[1] || segments[0] || 'common'
+
+    if (file.startsWith('{')) {
+        file = folder
+    }
+
+    // Chuẩn hóa tên folder và file theo đúng resource
+    if (folder === 'auth') {
+        if (file === 'web') file = 'web'
+        else if (file === 'me') file = 'me'
+    } else if (folder === 'assets') {
+        if (file === 'import') file = 'import'
+        else if (file === 'fixtures') file = 'fixtures'
+        else if (file === 'poles') file = 'poles'
+        else if (file === 'feeders') file = 'feeders'
+        else if (file === 'segments') file = 'segments'
+    } else if (folder === 'map') {
+        if (file === 'poles') file = 'poles'
+        else if (file === 'segments') file = 'segments'
+        else if (file === 'iot-nodes') file = 'iot-nodes'
+    } else if (folder === 'lux-readings') {
+        folder = 'luxreadings'
+        file = 'readings'
+    } else if (folder === 'work-orders') {
+        folder = 'workorders'
+        file = 'orders'
+    }
+
+    return { folder, file }
+}
+
 async function run() {
     try {
         const swagger = await fetchJson(swaggerUrl)
         const schemas = swagger.components?.schemas || {}
         const paths = swagger.paths || {}
 
-        console.log('📦 [2/2] Tự động phân tích Endpoint sau /api/v1/ và tạo các file Types thuần...')
+        console.log('📦 [2/3] Phân tích API, lọc bỏ Mobile và ánh xạ thư mục sau /api/v1/...')
 
-        // Xóa sạch toàn bộ file cũ trong src/types/ (kể cả api.d.ts)
-        if (fs.existsSync(typesDir)) {
-            for (const f of fs.readdirSync(typesDir)) {
-                fs.unlinkSync(path.resolve(typesDir, f))
-            }
-        } else {
-            fs.mkdirSync(typesDir, { recursive: true })
+        // 1. Phân loại Enums và Base types
+        const allEnums = new Set()
+        for (const [sName, sDef] of Object.entries(schemas)) {
+            if (sDef.enum) allEnums.add(sName)
         }
 
-        const commonSchemas = ['ApiError', 'PaginationMeta', 'ObjectApiResponse', 'UserDto', 'UserRole']
-        const moduleSchemas = {}
+        const commonBaseSchemas = new Set(['ApiError', 'ApiErrorResponse', 'PageQuery', 'AssetLocation', 'Geometry', 'UserDto'])
 
-        moduleSchemas['common'] = new Set(commonSchemas.filter(s => schemas[s]))
+        // 2. Định tuyến các endpoint và gom nhóm schemas theo từng file đích
+        const fileTargetSchemas = {}
+        const schemaLocations = {} // Schema -> fileKey ('folder/file')
 
-        // 1. Phân loại theo Endpoint path: /api/v1/{module}/...
-        for (const [endpointPath, methods] of Object.entries(paths)) {
-            let moduleName = 'common'
-            const match = endpointPath.match(/\/api\/(?:v\d+\/)?([^\/]+)/i)
-            if (match && match[1]) {
-                moduleName = match[1].toLowerCase().replace(/[^a-z0-9]/g, '')
-            }
+        // Enums luôn vào common/enums
+        for (const e of allEnums) {
+            schemaLocations[e] = 'common/enums'
+        }
+        // Base types luôn vào common/base
+        for (const b of commonBaseSchemas) {
+            schemaLocations[b] = 'common/base'
+        }
 
-            if (!moduleSchemas[moduleName]) {
-                moduleSchemas[moduleName] = new Set()
-            }
+        let skippedMobileCount = 0
+        let acceptedWebCount = 0
 
-            const endpointStr = JSON.stringify(methods)
-            for (const schemaName of Object.keys(schemas)) {
-                if (!commonSchemas.includes(schemaName) && endpointStr.includes(`"#/components/schemas/${schemaName}"`)) {
-                    moduleSchemas[moduleName].add(schemaName)
+        for (const [epPath, methods] of Object.entries(paths)) {
+            for (const [m, op] of Object.entries(methods)) {
+                const route = routeEndpoint(epPath, op)
+                if (!route) {
+                    skippedMobileCount++
+                    continue
+                }
+                acceptedWebCount++
+                const fileKey = `${route.folder}/${route.file}`
+                if (!fileTargetSchemas[fileKey]) {
+                    fileTargetSchemas[fileKey] = new Set()
+                }
+
+                // Quét schema liên quan trực tiếp
+                const opStr = JSON.stringify(op)
+                for (const sName of Object.keys(schemas)) {
+                    if (allEnums.has(sName) || commonBaseSchemas.has(sName)) continue
+                    if (opStr.includes(`"#/components/schemas/${sName}"`)) {
+                        fileTargetSchemas[fileKey].add(sName)
+                        if (!schemaLocations[sName]) {
+                            schemaLocations[sName] = fileKey
+                        }
+                    }
                 }
             }
         }
 
-        // 2. Tìm tất cả các schemas lồng nhau đệ quy
-        for (const [mod, sSet] of Object.entries(moduleSchemas)) {
+        // Đảm bảo các schema chuyên biệt được đặt về đúng file chủ quản
+        const explicitHome = {
+            'ActiveFixture': 'assets/fixtures',
+            'CreateFixtureRequest': 'assets/fixtures',
+            'RetireFixtureRequest': 'assets/fixtures',
+            'PoleListItem': 'assets/poles',
+            'PoleDetail': 'assets/poles',
+            'CreatePoleRequest': 'assets/poles',
+            'UpdatePoleRequest': 'assets/poles',
+            'SetPoleFeederRequest': 'assets/poles',
+            'PoleListItemPagedResult': 'assets/poles',
+            'FeederListItem': 'assets/feeders',
+            'FeederDetail': 'assets/feeders',
+            'CreateFeederRequest': 'assets/feeders',
+            'UpdateFeederRequest': 'assets/feeders',
+            'FeederListItemPagedResult': 'assets/feeders',
+            'SegmentListItem': 'assets/segments',
+            'SegmentDetail': 'assets/segments',
+            'CreateSegmentRequest': 'assets/segments',
+            'UpdateSegmentRequest': 'assets/segments',
+            'SegmentListItemPagedResult': 'assets/segments',
+            'TopologyPole': 'assets/segments',
+            'TopologyPolePagedResult': 'assets/segments',
+            'ImportResult': 'assets/import',
+            'ImportRowError': 'assets/import',
+            'WebLoginRequest': 'auth/web',
+            'WebAuthTokenResponse': 'auth/web',
+            'CurrentUserResponse': 'auth/me'
+        }
+
+        for (const [sName, destKey] of Object.entries(explicitHome)) {
+            schemaLocations[sName] = destKey
+            if (!fileTargetSchemas[destKey]) fileTargetSchemas[destKey] = new Set()
+            fileTargetSchemas[destKey].add(sName)
+        }
+
+        // Mở rộng đệ quy cho các DTO lồng nhau (sub-properties)
+        for (const [fileKey, sSet] of Object.entries(fileTargetSchemas)) {
             const queue = Array.from(sSet)
             while (queue.length > 0) {
                 const sName = queue.pop()
@@ -163,8 +261,10 @@ async function run() {
                 if (!sDef) continue
                 const sDefStr = JSON.stringify(sDef)
                 for (const otherSchema of Object.keys(schemas)) {
+                    if (allEnums.has(otherSchema) || commonBaseSchemas.has(otherSchema)) continue
                     if (sDefStr.includes(`"#/components/schemas/${otherSchema}"`)) {
-                        if (!commonSchemas.includes(otherSchema) && !sSet.has(otherSchema)) {
+                        if (!schemaLocations[otherSchema]) {
+                            schemaLocations[otherSchema] = fileKey
                             sSet.add(otherSchema)
                             queue.push(otherSchema)
                         }
@@ -173,72 +273,146 @@ async function run() {
             }
         }
 
-        // Sắp xếp sao cho Base Schema đứng trước Wrapper Schema
-        function sortSchemas(list) {
-            return list.sort((a, b) => {
-                if (a.includes('ApiResponse') && !b.includes('ApiResponse')) return 1
-                if (!a.includes('ApiResponse') && b.includes('ApiResponse')) return -1
-                return a.localeCompare(b)
-            })
-        }
+        console.log(`  ✓ Đã lọc bỏ ${skippedMobileCount} API Mobile`)
+        console.log(`  ✓ Đã giữ lại ${acceptedWebCount} API Web / Dùng chung`)
 
-        const generatedFiles = []
+        // 3. Dọn dẹp thư mục src/types/ (Xóa các file phẳng cũ để thay bằng folder mới)
+        console.log('🧹 [3/3] Dọn dẹp các file cũ và tạo cây thư mục types con...')
 
-        // 1. Tạo src/types/common.ts
-        if (moduleSchemas['common'] && moduleSchemas['common'].size > 0) {
-            let commonContent = `/**\n * Common Types & Response Wrappers\n * Auto-generated from Backend Swagger\n */\n\n`
-            for (const sName of sortSchemas(Array.from(moduleSchemas['common']))) {
-                const sDef = schemas[sName]
-                if (sDef) {
-                    commonContent += generateInterface(sName, sDef) + '\n'
+        // Xóa các file type phẳng cũ ở root src/types/
+        if (fs.existsSync(typesDir)) {
+            const oldFlatFiles = ['assets.ts', 'poles.ts', 'segments.ts', 'auth.ts', 'luxreadings.ts', 'iotnodes.ts', 'workorders.ts', 'common.ts']
+            for (const f of oldFlatFiles) {
+                const fullP = path.resolve(typesDir, f)
+                if (fs.existsSync(fullP)) {
+                    fs.unlinkSync(fullP)
                 }
             }
-            if (!moduleSchemas['common'].has('UserDto')) {
-                commonContent += `export interface UserDto {\n    id?: string | null\n    username?: string | null\n    email?: string | null\n    full_name?: string | null\n    role?: string | null\n    commune_ids?: string[]\n}\n\n`
-            }
-            fs.writeFileSync(path.resolve(typesDir, 'common.ts'), commonContent, 'utf-8')
-            console.log(`  ✓ Đã tạo: src/types/common.ts`)
-            generatedFiles.push('common')
+        } else {
+            fs.mkdirSync(typesDir, { recursive: true })
         }
 
-        // 2. Tạo từng file module
-        for (const [modName, schemaSet] of Object.entries(moduleSchemas)) {
-            if (modName === 'common' || schemaSet.size === 0) continue
+        // Helper tính toán đường dẫn tương đối import giữa 2 fileKey (ví dụ 'assets/poles' và 'common/enums')
+        function getRelativeImport(fromKey, toKey) {
+            const fromDir = path.dirname(fromKey)
+            const rel = path.relative(fromDir, toKey).replace(/\\/g, '/')
+            return rel.startsWith('.') ? rel : `./${rel}`
+        }
 
-            const schemaList = Array.from(schemaSet)
-            const filename = `${modName}.ts`
-            let fileContent = `/**\n * Auto-generated Types for Module: ${modName}\n * Tự động tạo dựa trên endpoint: /api/v1/${modName}/*\n */\n`
+        // 4. Sinh file: common/enums.ts
+        const commonDir = path.resolve(typesDir, 'common')
+        fs.mkdirSync(commonDir, { recursive: true })
 
-            // Check which common imports are needed
-            const combinedSchemaStr = JSON.stringify(schemaList.map(s => schemas[s]))
-            const neededImports = commonSchemas.filter(cs => combinedSchemaStr.includes(`"#/components/schemas/${cs}"`))
-            if (modName === 'auth') {
-                if (!neededImports.includes('UserDto')) neededImports.push('UserDto')
+        let enumsContent = `/**\n * Domain Enums (Dùng chung toàn hệ thống)\n * Tự động sinh từ Backend Swagger\n */\n\n`
+        for (const eName of Array.from(allEnums).sort()) {
+            enumsContent += generateInterface(eName, schemas[eName]) + '\n'
+        }
+        fs.writeFileSync(path.resolve(commonDir, 'enums.ts'), enumsContent, 'utf-8')
+        console.log(`  ✓ Đã tạo: src/types/common/enums.ts (${allEnums.size} enums)`)
+
+        // 5. Sinh file: common/base.ts
+        let baseContent = `/**\n * Base Types & Error Wrappers\n * Tự động sinh từ Backend Swagger\n */\n`
+        for (const bName of Array.from(commonBaseSchemas).sort()) {
+            if (schemas[bName]) {
+                baseContent += generateInterface(bName, schemas[bName]) + '\n'
+            }
+        }
+        if (!schemas['UserDto']) {
+            baseContent += `export interface UserDto {\n    id?: string | null\n    username?: string | null\n    email?: string | null\n    full_name?: string | null\n    role?: string | null\n    commune_ids?: string[]\n}\n\n`
+        }
+        baseContent += `export interface PaginationMeta {\n    page: number\n    pageSize: number\n    total: number\n    totalPages: number\n}\n`
+        fs.writeFileSync(path.resolve(commonDir, 'base.ts'), baseContent, 'utf-8')
+        console.log(`  ✓ Đã tạo: src/types/common/base.ts`)
+
+        // 6. Sinh từng file domain
+        for (const [fileKey, sSet] of Object.entries(fileTargetSchemas)) {
+            const [folderName, fileName] = fileKey.split('/')
+            const targetDir = path.resolve(typesDir, folderName)
+            fs.mkdirSync(targetDir, { recursive: true })
+
+            const schemaList = Array.from(sSet).sort()
+            let fileContent = `/**\n * Auto-generated Types for: ${folderName}/${fileName}\n * Sinh tự động từ endpoint Backend\n */\n`
+
+            // Tính toán dependencies cần import
+            const neededImports = {} // toKey -> Set of schema names
+            const schemasInThisFile = new Set(schemaList)
+
+            for (const sName of schemaList) {
+                const sDef = schemas[sName]
+                if (!sDef) continue
+                const sStr = JSON.stringify(sDef)
+
+                // Kiểm tra có dùng Enum nào không
+                for (const eName of allEnums) {
+                    if (sStr.includes(`"#/components/schemas/${eName}"`)) {
+                        if (!neededImports['common/enums']) neededImports['common/enums'] = new Set()
+                        neededImports['common/enums'].add(eName)
+                    }
+                }
+
+                // Kiểm tra có dùng Base schema nào không
+                for (const bName of commonBaseSchemas) {
+                    if (sStr.includes(`"#/components/schemas/${bName}"`)) {
+                        if (!neededImports['common/base']) neededImports['common/base'] = new Set()
+                        neededImports['common/base'].add(bName)
+                    }
+                }
+
+                // Kiểm tra có dùng schema ở file khác không
+                for (const otherS of Object.keys(schemas)) {
+                    if (allEnums.has(otherS) || commonBaseSchemas.has(otherS)) continue
+                    if (schemasInThisFile.has(otherS)) continue
+                    if (sStr.includes(`"#/components/schemas/${otherS}"`)) {
+                        const otherLocation = schemaLocations[otherS]
+                        if (otherLocation && otherLocation !== fileKey) {
+                            if (!neededImports[otherLocation]) neededImports[otherLocation] = new Set()
+                            neededImports[otherLocation].add(otherS)
+                        }
+                    }
+                }
             }
 
-            if (neededImports.length > 0) {
-                fileContent += `import type { ${neededImports.join(', ')} } from './common'\n\n`
+            // Ghi các câu lệnh import
+            for (const [otherKey, names] of Object.entries(neededImports)) {
+                const relPath = getRelativeImport(fileKey, otherKey)
+                fileContent += `import type { ${Array.from(names).sort().join(', ')} } from '${relPath}'\n`
+            }
+            if (Object.keys(neededImports).length > 0) {
+                fileContent += '\n'
             }
 
-            for (const sName of sortSchemas(schemaList)) {
+            // Ghi các interface
+            for (const sName of schemaList) {
+                if (fileKey === 'auth/web' && (sName === 'WebAuthTokenResponse' || sName === 'WebLoginRequest')) {
+                    continue // Sẽ được định nghĩa mở rộng bên dưới
+                }
                 const sDef = schemas[sName]
                 if (sDef) {
                     fileContent += generateInterface(sName, sDef) + '\n'
                 }
             }
 
-            if (modName === 'auth') {
-                fileContent += `\nexport interface AuthState {\n    user: UserDto | null\n    accessToken: string | null\n    refreshToken: string | null\n    loading: boolean\n    error: string | null\n}\n`
+            // Bổ trợ riêng cho auth/web.ts để tương thích với auth slice
+            if (fileKey === 'auth/web') {
+                fileContent += `export interface WebAuthTokenResponse {\n    accessToken?: string\n    access_token?: string | null\n    tokenType?: string\n    token_type?: string | null\n    expiresIn?: number\n    expires_in?: number\n}\n\n`
+                fileContent += `export interface WebLoginRequest {\n    username?: string | null\n    password?: string | null\n    rememberMe?: boolean\n    remember_me?: boolean\n    emailOrPhone?: string\n}\n\n`
+                fileContent += `export enum UserRole {\n  ManagementAgency = 0,\n  MaintenanceEngineer = 1,\n  FieldCrew = 2,\n  Admin = 3,\n}\n`
+                fileContent += `\nexport interface User {\n  id?: string\n  userId?: string\n  fullName: string\n  username?: string\n  email: string | null\n  phoneNumber?: string | null\n  role: UserRole\n  roleString?: string\n  administrativeUnitId?: string\n  communeIds?: string[]\n}\n`
+                fileContent += `\nexport interface JwtPayloadClaims {\n  sub: string\n  role: string\n  commune_ids: string[]\n  exp: number\n  iat: number\n  iss?: string\n  aud?: string\n}\n`
+                fileContent += `\nexport interface AuthState {\n  user: User | null\n  isAuthenticated: boolean\n  accessToken?: string | null\n  refreshToken?: string | null\n  loading: boolean\n  isRefreshingProfile?: boolean\n  error: string | null\n}\n`
+                fileContent += `\nexport interface LoginRequest {\n  emailOrPhone: string\n  password: string\n  rememberMe?: boolean\n  username?: string\n  remember_me?: boolean\n}\n`
+                fileContent += `\nexport interface RegisterRequest {\n  username?: string | null\n  fullName?: string\n  full_name?: string | null\n  email?: string | null\n  phoneNumber?: string | null\n  password?: string | null\n  administrativeUnitId?: string\n  role?: UserRole\n}\n`
+                fileContent += `\nexport interface RegisterResponse {\n  user_id?: string | null\n  username?: string | null\n  email?: string | null\n  full_name?: string | null\n  role?: string | null\n  commune_ids?: string | null[]\n  message?: string | null\n}\n`
+                fileContent += `\nexport interface ApiResponse<T> {\n  data: T | null\n  error?: {\n    code: string\n    message: string\n    details?: Record<string, string[]>\n  } | null\n}\n`
+                fileContent += `\nexport interface CurrentUserResponse {\n  user_id: string\n  username: string\n  email: string\n  full_name: string\n  role: string\n  commune_ids: string[]\n}\n`
             }
 
-            fs.writeFileSync(path.resolve(typesDir, filename), fileContent, 'utf-8')
-            console.log(`  ✓ Đã tạo: src/types/${filename}`)
-            generatedFiles.push(modName)
+            const outPath = path.resolve(targetDir, `${fileName}.ts`)
+            fs.writeFileSync(outPath, fileContent, 'utf-8')
+            console.log(`  ✓ Đã tạo: src/types/${folderName}/${fileName}.ts`)
         }
 
-
-
-        console.log('✨ XONG! Đã xóa sạch api.d.ts, thư mục chỉ còn các file domain thuần túy!')
+        console.log('\n✨ XONG! Đã cấu trúc lại types theo folder sau v1, lọc sạch Mobile và không dùng barrel index.ts!')
     } catch (err) {
         console.error('❌ Lỗi:', err.message)
         process.exit(1)

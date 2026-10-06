@@ -1,8 +1,7 @@
 import React, { useRef, useState, useMemo, useCallback } from 'react'
 import * as maplibregl from 'maplibre-gl'
 
-// Backend Types (Tự động tạo từ Backend, giữ nguyên không can thiệp)
-import type { FixtureType, PowerSource, RoadClass, DataSource } from '../../types/assets'
+import type { FixtureType, PowerSource, RoadClass, DataSource } from '../../types/common/enums'
 
 // GeoJSON & UI Types (Giữ nguyên tại đây để đảm bảo tương thích ngược 100% với các file import)
 export interface PoleProperties {

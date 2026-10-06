@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { AuthState, User, LoginRequest } from '../../types/auth'
+import { AuthState, User, LoginRequest } from '../../types/auth/web'
 
 // Khi ứng dụng khởi chạy, mặc định loading = true để thực hiện Silent Refresh kiểm tra phiên cookie
 const initialState: AuthState = {

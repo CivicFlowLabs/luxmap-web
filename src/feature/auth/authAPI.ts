@@ -2,10 +2,10 @@ import apiClient from '../../config/apiClient'
 import {
   WebLoginRequest,
   WebAuthTokenResponse,
+  CurrentUserResponse,
   RegisterRequest,
   ApiResponse,
-  CurrentUserResponse,
-} from '../../types/auth'
+} from '../../types/auth/web'
 
 // Biến lưu promise refresh đang bay để tránh gọi đồng thời nhiều request cùng lúc (Race Condition)
 let inFlightRefreshPromise: Promise<WebAuthTokenResponse> | null = null
