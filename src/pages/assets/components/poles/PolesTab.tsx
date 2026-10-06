@@ -19,6 +19,7 @@ export interface PolesTabProps {
   onUpdatePole: (updated: PoleListItem) => void
   onOpenImport: () => void
   onViewCabinetDetail?: (cabinet: FeederListItem) => void
+  onSelectFixture?: (fixtureCode: string) => void
 }
 
 export const PolesTab: React.FC<PolesTabProps> = ({
@@ -30,6 +31,7 @@ export const PolesTab: React.FC<PolesTabProps> = ({
   onUpdatePole,
   onOpenImport,
   onViewCabinetDetail,
+  onSelectFixture,
 }) => {
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('')
@@ -162,6 +164,7 @@ export const PolesTab: React.FC<PolesTabProps> = ({
         onViewDetail={(pole) => setDetailPole(pole)}
         onEdit={(pole) => setEditPole(pole)}
         onViewCabinetDetail={handleCabinetClick}
+        onSelectFixture={onSelectFixture}
       />
 
       {/* Pagination Footer */}

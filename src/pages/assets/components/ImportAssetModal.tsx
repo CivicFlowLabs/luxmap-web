@@ -18,6 +18,7 @@ import {
   Lightbulb,
   AlertTriangle,
   ShieldAlert,
+  Bookmark,
 } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
 import type { RootState } from '../../../redux/rootReducer'
@@ -663,6 +664,12 @@ export const ImportAssetModal: React.FC<ImportAssetModalProps> = ({
                                       Tủ: {item.cabinetId}
                                     </div>
                                   )}
+                                  {item.note && (
+                                    <div className="text-[10px] text-amber-700 font-medium truncate max-w-[170px] flex items-center gap-1 mt-0.5" title={item.note}>
+                                      <Bookmark className="w-3 h-3 text-amber-500 shrink-0" />
+                                      <span>{item.note}</span>
+                                    </div>
+                                  )}
                                 </>
                               )}
                             </td>
@@ -709,7 +716,7 @@ export const ImportAssetModal: React.FC<ImportAssetModalProps> = ({
                                       ? `Tuyến: ${item.segmentName} • Dài: ${item.lengthM}m • Cấp: ${item.roadClass === 'inter_commune' ? 'Liên xã' : 'Liên thôn'}`
                                       : category === 'cabinets'
                                         ? `Tủ: ${item.cabinetName} • Xã: ${item.communeId}`
-                                        : `Tạo mới (${item.lampWatt}W, ${item.segmentName})`}
+                                        : `Tạo mới (${item.lampWatt}W, ${item.segmentName})${item.note ? ` • Ghi chú: ${item.note}` : ''}`}
                                 </div>
                               ) : (
                                 <div className="flex flex-wrap items-center gap-1.5">
@@ -722,6 +729,21 @@ export const ImportAssetModal: React.FC<ImportAssetModalProps> = ({
                                           className="inline-flex items-center gap-1.5 text-[10px] whitespace-nowrap bg-amber-50 text-amber-900 border border-amber-300 px-2.5 py-1 rounded-lg shadow-2xs font-medium"
                                         >
                                           <ShieldAlert className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                          <span className="font-semibold">{d.label}:</span>
+                                          <span className="line-through text-slate-400 whitespace-nowrap">{d.oldVal}</span>
+                                          <ArrowRight className="w-2.5 h-2.5 text-amber-600 shrink-0" />
+                                          <span className="font-bold text-amber-800 whitespace-nowrap">{d.newVal}</span>
+                                        </span>
+                                      )
+                                    }
+                                    const isNote = d.label.includes('Ghi chú') || d.label.includes('Atlas')
+                                    if (isNote) {
+                                      return (
+                                        <span
+                                          key={dIdx}
+                                          className="inline-flex items-center gap-1.5 text-[10px] whitespace-nowrap bg-amber-50 text-amber-900 border border-amber-300 px-2.5 py-1 rounded-lg shadow-2xs font-medium"
+                                        >
+                                          <Bookmark className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                                           <span className="font-semibold">{d.label}:</span>
                                           <span className="line-through text-slate-400 whitespace-nowrap">{d.oldVal}</span>
                                           <ArrowRight className="w-2.5 h-2.5 text-amber-600 shrink-0" />

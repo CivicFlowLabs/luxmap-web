@@ -21,6 +21,10 @@ export type NodeRole = 'segment_controller'
 
 export type NodeStatus = 'online' | 'offline' | 'never_reported'
 
+export type NotificationEntityType = 'work_order' | 'survey_sweep' | 'fault'
+
+export type NotificationType = 'work_order_assigned' | 'work_order_unassigned' | 'work_order_rescheduled' | 'work_order_returned' | 'work_order_cancelled' | 'work_order_completed' | 'work_order_verified' | 'survey_returned' | 'survey_ready_for_review' | 'survey_processing_failed' | 'fault_reported'
+
 export type PowerSource = 'grid'
 
 export type RoadClass = 'inter_commune' | 'inter_village'

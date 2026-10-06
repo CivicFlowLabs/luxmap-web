@@ -14,6 +14,7 @@ export interface CreatePoleRequest {
     geom_wkt: string | null
     near_sensitive_poi?: boolean
     data_source: DataSource
+    note?: string | null
 }
 
 export interface PoleDetail {
@@ -33,7 +34,10 @@ export interface PoleListItem {
     near_sensitive_poi: boolean
     location: AssetLocation
     active_fixture?: ActiveFixture
+    note?: string | null
     updated_at: string | null
+    updated_by?: string | null
+    updated_by_name?: string | null
 }
 
 export interface PoleListItemPagedResult {
@@ -43,8 +47,20 @@ export interface PoleListItemPagedResult {
     items?: PoleListItem[]
 }
 
+export interface PoleNoteResponse {
+    pole_id?: string | null
+    note?: string | null
+    updated_at?: string | null
+    updated_by?: string | null
+    updated_by_name?: string | null
+}
+
 export interface SetPoleFeederRequest {
     feeder_id?: string | null
+}
+
+export interface SetPoleNoteRequest {
+    note?: string | null
 }
 
 export interface UpdatePoleRequest {
@@ -54,5 +70,6 @@ export interface UpdatePoleRequest {
     geom_wkt: string | null
     near_sensitive_poi?: boolean
     data_source: DataSource
+    note?: string | null
 }
 

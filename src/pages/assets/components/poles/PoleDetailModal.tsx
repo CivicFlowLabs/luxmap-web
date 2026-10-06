@@ -1,6 +1,6 @@
 import React from 'react'
 import { createPortal } from 'react-dom'
-import { X, MapPin, ShieldCheck, Zap, Lightbulb, AlertTriangle } from 'lucide-react'
+import { X, MapPin, Zap, Lightbulb, AlertTriangle, Bookmark } from 'lucide-react'
 import { StatusBadge } from '../../../../components/StatusBadge'
 import type { PoleListItem } from '../../../../types/assets/poles'
 import type { SegmentListItem } from '../../../../types/assets/segments'
@@ -37,7 +37,6 @@ export const PoleDetailModal: React.FC<PoleDetailModalProps> = ({
 
   const watt = pole.active_fixture?.lamp_watt || 100
   const fixtureStatus = pole.active_fixture ? 'normal' : 'out'
-  const warranty = pole.active_fixture?.warranty_expiry || 'Chưa thiết lập'
   const lat = pole.location?.lat ?? 10.9701
   const lng = pole.location?.lng ?? 106.4896
 
@@ -106,14 +105,14 @@ export const PoleDetailModal: React.FC<PoleDetailModalProps> = ({
 
             <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-2xs">
               <div className="text-[10px] text-slate-400 dark:text-slate-400 font-bold uppercase flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3 text-purple-500" />
-                <span>Hạn bảo hành</span>
+                <AlertTriangle className="w-3 h-3 text-amber-500" />
+                <span>Khu vực nhạy cảm (POI)</span>
               </div>
-              <div className="text-sm font-black text-purple-700 dark:text-purple-300 mt-1">
-                {warranty}
+              <div className={`text-sm font-black mt-1 ${pole.near_sensitive_poi ? 'text-amber-600 dark:text-amber-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                {pole.near_sensitive_poi ? 'Khu vực nhạy cảm' : 'Bình thường'}
               </div>
               <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-                Nguồn dữ liệu: {pole.data_source}
+                Nguồn: {pole.data_source === 'field' ? 'Khảo sát thực địa' : pole.data_source}
               </div>
             </div>
           </div>
@@ -145,6 +144,36 @@ export const PoleDetailModal: React.FC<PoleDetailModalProps> = ({
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Ghi chú hiện trường */}
+          <div className="p-4 bg-amber-50/70 dark:bg-amber-950/30 rounded-2xl border border-amber-200 dark:border-amber-900/60 space-y-1.5">
+            <div className="font-bold text-amber-950 dark:text-amber-200 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Bookmark className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <span>Ghi chú hiện trường:</span>
+              </span>
+              {pole.updated_at && (
+                <span className="text-[10px] text-amber-700 dark:text-amber-400 font-mono">
+                  Cập nhật: {new Date(pole.updated_at).toLocaleDateString('vi-VN')}
+                </span>
+              )}
+            </div>
+            {pole.note ? (
+              <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                {pole.note}
+              </p>
+            ) : (
+              <p className="text-xs text-slate-400 dark:text-slate-500 italic">
+                Chưa có ghi chú cho vị trí cột này.
+              </p>
+            )}
+            {(pole.updated_by_name || pole.updated_by) && (
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-amber-200/60 dark:border-amber-900/40">
+                Người cập nhật: <strong className="text-slate-700 dark:text-slate-300">{pole.updated_by_name || pole.updated_by}</strong>
+                {pole.updated_by && pole.updated_by_name && <span className="font-mono text-[10px] text-slate-400 ml-1">({pole.updated_by})</span>}
+              </div>
+            )}
           </div>
         </div>
 

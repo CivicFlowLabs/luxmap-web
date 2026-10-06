@@ -29,6 +29,7 @@ export interface PoleMapDetail {
     runtime_history: PoleMapRuntimePoint[]
     open_faults: PoleMapOpenFault[]
     recent_frames: PoleMapFrame[]
+    note?: string | null
 }
 
 export interface PoleMapFixture {

@@ -30,6 +30,8 @@ export interface SegmentListItem {
     data_source: DataSource
     pole_count: number
     updated_at: string | null
+    updated_by?: string | null
+    updated_by_name?: string | null
 }
 
 export interface SegmentListItemPagedResult {
