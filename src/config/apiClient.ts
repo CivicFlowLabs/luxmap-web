@@ -1,7 +1,7 @@
 import axios, { AxiosRequestConfig, AxiosError } from 'axios'
 import tokenStorage from '../utils/tokenStorage'
 
-const RAW_URL = (import.meta.env.VITE_API_URL || 'https://localhost:7252').trim().replace(/\/+$/, '')
+const RAW_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5141').trim().replace(/\/+$/, '')
 export const API_BASE_URL = RAW_URL.endsWith('/api/v1') ? RAW_URL : `${RAW_URL}/api/v1`
 
 export const clearTokens = () => {
