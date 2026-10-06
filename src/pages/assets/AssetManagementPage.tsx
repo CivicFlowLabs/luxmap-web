@@ -18,6 +18,12 @@ export type AssetCategory = 'poles' | 'fixtures' | 'cabinets' | 'segments' | 'po
 export const AssetManagementPage: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<AssetCategory>('poles')
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+  const [selectedFixtureCode, setSelectedFixtureCode] = useState<string>('')
+
+  const handleSelectFixture = (fixtureCode: string) => {
+    setSelectedFixtureCode(fixtureCode)
+    setActiveCategory('fixtures')
+  }
 
   const {
     poles,
@@ -77,7 +83,10 @@ export const AssetManagementPage: React.FC = () => {
           {/* Tab 1: Cột điện */}
           <button
             type="button"
-            onClick={() => setActiveCategory('poles')}
+            onClick={() => {
+              setSelectedFixtureCode('')
+              setActiveCategory('poles')
+            }}
             className={`relative z-10 py-2.5 px-4 rounded-xl text-xs transition-colors duration-200 flex items-center justify-center gap-2 cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus:ring-0 border-0 ${
               activeCategory === 'poles' || activeCategory === 'poles_and_fixtures'
                 ? 'text-slate-900 dark:text-white font-bold'
@@ -106,7 +115,10 @@ export const AssetManagementPage: React.FC = () => {
           {/* Tab 2: Bóng đèn */}
           <button
             type="button"
-            onClick={() => setActiveCategory('fixtures')}
+            onClick={() => {
+              setSelectedFixtureCode('')
+              setActiveCategory('fixtures')
+            }}
             className={`relative z-10 py-2.5 px-4 rounded-xl text-xs transition-colors duration-200 flex items-center justify-center gap-2 cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus:ring-0 border-0 ${
               activeCategory === 'fixtures'
                 ? 'text-slate-900 dark:text-white font-bold'
@@ -135,7 +147,10 @@ export const AssetManagementPage: React.FC = () => {
           {/* Tab 3: Tủ điện & Mạch nguồn (Feeder) */}
           <button
             type="button"
-            onClick={() => setActiveCategory('cabinets')}
+            onClick={() => {
+              setSelectedFixtureCode('')
+              setActiveCategory('cabinets')
+            }}
             className={`relative z-10 py-2.5 px-4 rounded-xl text-xs transition-colors duration-200 flex items-center justify-center gap-2 cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus:ring-0 border-0 ${
               activeCategory === 'cabinets' || (activeCategory as string) === 'feeders'
                 ? 'text-slate-900 dark:text-white font-bold'
@@ -164,7 +179,10 @@ export const AssetManagementPage: React.FC = () => {
           {/* Tab 4: Tuyến đường chiếu sáng */}
           <button
             type="button"
-            onClick={() => setActiveCategory('segments')}
+            onClick={() => {
+              setSelectedFixtureCode('')
+              setActiveCategory('segments')
+            }}
             className={`relative z-10 py-2.5 px-4 rounded-xl text-xs transition-colors duration-200 flex items-center justify-center gap-2 cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus:ring-0 border-0 ${
               activeCategory === 'segments'
                 ? 'text-slate-900 dark:text-white font-bold'
@@ -204,6 +222,7 @@ export const AssetManagementPage: React.FC = () => {
             onViewCabinetDetail={() => {
               setActiveCategory('cabinets')
             }}
+            onSelectFixture={handleSelectFixture}
           />
         )}
 
@@ -212,6 +231,8 @@ export const AssetManagementPage: React.FC = () => {
           <FixturesTab
             fixtures={fixtures}
             poles={poles}
+            activeFixtureCode={selectedFixtureCode}
+            onClearActiveFixture={() => setSelectedFixtureCode('')}
             onAddFixture={handleAddFixture}
             onUpdateFixture={handleUpdateFixture}
             onOpenImport={() => setIsImportModalOpen(true)}

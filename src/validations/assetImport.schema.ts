@@ -38,6 +38,7 @@ export interface ParsedItemReview {
   lengthM?: number
   communeId?: string
   feederName?: string
+  note?: string
 }
 
 /**
@@ -110,6 +111,10 @@ export const poleImportSchema = z.object({
   warranty_expiry: z.preprocess(
     (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
     z.string().optional().nullable()
+  ),
+  note: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
+    z.string().max(1000, 'Ghi chú không được vượt quá 1000 ký tự').optional().nullable()
   ),
 })
 export type PoleImportInput = z.infer<typeof poleImportSchema>
@@ -625,11 +630,20 @@ export function validateImportRow(
         newVal: data.warranty_expiry,
       })
     }
-    if (existingPole.near_sensitive_poi !== data.near_sensitive_poi) {
+    if (data.near_sensitive_poi !== undefined && existingPole.near_sensitive_poi !== data.near_sensitive_poi) {
       diffs.push({
         label: 'Khu vực nhạy cảm (POI)',
         oldVal: existingPole.near_sensitive_poi ? 'Gần khu nhạy cảm' : 'Bình thường',
         newVal: data.near_sensitive_poi ? 'Gần khu nhạy cảm' : 'Bình thường',
+      })
+    }
+    const incomingNote = data.note !== undefined ? data.note?.trim() || null : null
+    const currentNote = existingPole.note?.trim() || null
+    if (incomingNote !== null && incomingNote !== currentNote) {
+      diffs.push({
+        label: 'Ghi chú',
+        oldVal: currentNote || 'Chưa có ghi chú',
+        newVal: incomingNote,
       })
     }
 
@@ -650,6 +664,7 @@ export function validateImportRow(
     fixtureType,
     warrantyExpiry,
     nearSensitivePoi: data.near_sensitive_poi,
+    note: data.note || existingPole?.note || undefined,
     diffs,
   }
 }

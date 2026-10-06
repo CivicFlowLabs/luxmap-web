@@ -1,0 +1,7 @@
+external_ref,feeder_name,commune_id,geom_wkt
+CAB-TL8-A,"Tủ A - Tỉnh Lộ 8",COM-001,
+CAB-TL8-B,"Tủ B - Tỉnh Lộ 8",COM-001,
+CAB-NVN-A,"Tủ A - Nguyễn Văn Ni",COM-001,
+CAB-NVN-B,"Tủ B - Nguyễn Văn Ni",COM-001,
+CAB-HVC-A,"Tủ A - Huỳnh Văn Cọ",COM-001,
+CAB-HVC-B,"Tủ B - Huỳnh Văn Cọ",COM-001,

@@ -25,6 +25,8 @@ export interface FeederListItem {
     has_geometry: boolean
     pole_count: number
     updated_at: string | null
+    updated_by?: string | null
+    updated_by_name?: string | null
 }
 
 export interface FeederListItemPagedResult {

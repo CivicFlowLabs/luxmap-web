@@ -6,23 +6,37 @@ import type { PoleListItem } from '../../../../types/assets/poles'
 interface FixtureTableProps {
   fixtures: ManagedFixture[]
   poles: PoleListItem[]
+  flashingFixtureCode?: string
   onEditFixture: (fixture: ManagedFixture) => void
 }
 
 export const FixtureTable: React.FC<FixtureTableProps> = ({
   fixtures,
   poles,
+  flashingFixtureCode,
   onEditFixture,
 }) => {
-  // Pre-build pole map for lightning-fast foreign key lookup
+  // Pre-build pole map by external_ref for metadata lookup
   const poleMap = React.useMemo(() => {
     const map = new Map<string, PoleListItem>()
     poles.forEach((p) => {
-      if (p.pole_id) map.set(p.pole_id.toLowerCase(), p)
       if (p.external_ref) map.set(p.external_ref.toLowerCase(), p)
     })
     return map
   }, [poles])
+
+  // Scroll to active flashing fixture row smoothly
+  React.useEffect(() => {
+    if (flashingFixtureCode) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`fixture-row-${flashingFixtureCode.toLowerCase()}`)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [flashingFixtureCode])
 
   const getWattBadge = (watt: number) => {
     if (watt <= 60) {
@@ -41,7 +55,7 @@ export const FixtureTable: React.FC<FixtureTableProps> = ({
       <table className="w-full text-left text-xs border-collapse">
         <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200 sticky top-0 z-10 select-none">
           <tr>
-            <th className="py-3 px-3.5">Mã Bóng / Cột Gắn</th>
+            <th className="py-3 px-3.5">Mã bóng</th>
             <th className="py-3 px-3.5">Cột Lắp Đặt</th>
             <th className="py-3 px-3.5">Tuyến Đường</th>
             <th className="py-3 px-3.5 text-center">Công Suất</th>
@@ -64,31 +78,30 @@ export const FixtureTable: React.FC<FixtureTableProps> = ({
             </tr>
           ) : (
             fixtures.map((fixture, idx) => {
-              const pole =
-                (fixture.pole_id ? poleMap.get(fixture.pole_id.toLowerCase()) : undefined) ||
-                (fixture.pole_external_ref ? poleMap.get(fixture.pole_external_ref.toLowerCase()) : undefined)
-              const poleExternal = pole?.external_ref || fixture.pole_external_ref
+              const pole = fixture.pole_external_ref ? poleMap.get(fixture.pole_external_ref.toLowerCase()) : undefined
+              const poleExternal = fixture.pole_external_ref || 'Chưa gán'
               const isRetired = Boolean(fixture.removed_date)
+              const fixtureId = fixture.fixture_id || (fixture.pole_external_ref ? `FIX-${fixture.pole_external_ref}` : '')
+              const isFlashing = Boolean(flashingFixtureCode && fixtureId && fixtureId.toLowerCase() === flashingFixtureCode.toLowerCase())
 
               return (
                 <tr
-                  key={poleExternal || idx}
+                  key={fixtureId || fixture.pole_external_ref || idx}
+                  id={fixtureId ? `fixture-row-${fixtureId.toLowerCase()}` : undefined}
                   className={`hover:bg-slate-50/80 transition-colors ${
                     isRetired ? 'bg-slate-50/50 opacity-75' : ''
-                  }`}
+                  } ${isFlashing ? 'animate-row-flash' : ''}`}
                 >
-                  {/* Mã bóng / Cột gắn */}
-                  <td className="py-2.5 px-3.5 font-mono font-bold text-slate-900">
-                    <span className="bg-slate-100 text-slate-800 px-2 py-0.5 rounded-md border border-slate-200/80">
-                      {poleExternal || 'CHƯA ĐẶT'}
-                    </span>
+                  {/* Mã bóng */}
+                  <td className="py-2.5 px-3.5 font-mono font-semibold text-slate-900">
+                    {fixtureId || <span className="text-slate-400 font-normal italic">Chưa đặt</span>}
                   </td>
 
                   {/* Cột điện gắn bóng */}
                   <td className="py-2.5 px-3.5 font-mono font-semibold text-blue-600">
-                    {poleExternal ? (
+                    {fixture.pole_external_ref ? (
                       <span className="hover:underline cursor-pointer">
-                        {poleExternal}
+                        {fixture.pole_external_ref}
                       </span>
                     ) : (
                       <span className="text-slate-400 font-normal italic">Chưa gán</span>

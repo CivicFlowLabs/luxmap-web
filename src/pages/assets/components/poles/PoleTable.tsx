@@ -1,5 +1,5 @@
 import React from 'react'
-import { Eye, Edit2, Zap } from 'lucide-react'
+import { Eye, Edit2, Zap, Bookmark, Lightbulb } from 'lucide-react'
 import { toast } from 'sonner'
 import { StatusBadge } from '../../../../components/StatusBadge'
 import type { PoleListItem } from '../../../../types/assets/poles'
@@ -13,6 +13,7 @@ export interface PoleTableProps {
   onViewDetail: (pole: PoleListItem) => void
   onEdit: (pole: PoleListItem) => void
   onViewCabinetDetail: (cabinet: FeederListItem) => void
+  onSelectFixture?: (fixtureCode: string) => void
 }
 
 export const PoleTable: React.FC<PoleTableProps> = ({
@@ -22,6 +23,7 @@ export const PoleTable: React.FC<PoleTableProps> = ({
   onViewDetail,
   onEdit,
   onViewCabinetDetail,
+  onSelectFixture,
 }) => {
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md overflow-hidden">
@@ -32,10 +34,10 @@ export const PoleTable: React.FC<PoleTableProps> = ({
               <th className="p-3.5">Mã cột</th>
               <th className="p-3.5">Tuyến đường</th>
               <th className="p-3.5">Tủ điện nguồn</th>
+              <th className="p-3.5">Ghi chú</th>
               <th className="p-3.5">Địa bàn</th>
-              <th className="p-3.5">Công suất</th>
+              <th className="p-3.5">Mã bóng</th>
               <th className="p-3.5">Trạng thái</th>
-              <th className="p-3.5">Bảo hành</th>
               <th className="p-3.5 text-right">Thao tác</th>
             </tr>
           </thead>
@@ -57,9 +59,7 @@ export const PoleTable: React.FC<PoleTableProps> = ({
                   (c) => c.feeder_id === pole.feeder_id || (c.external_ref && c.external_ref.toLowerCase() === pole.feeder_id?.toLowerCase())
                 )
                 const feederLabel = targetCab?.feeder_name || targetCab?.external_ref || 'Chưa gắn'
-                const watt = pole.active_fixture?.lamp_watt
                 const fixtureStatus = pole.active_fixture ? 'normal' : 'out'
-                const warrantyExpiry = pole.active_fixture?.warranty_expiry
 
                 return (
                   <tr key={pole.external_ref || pole.pole_id || Math.random()} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/80 transition">
@@ -73,7 +73,7 @@ export const PoleTable: React.FC<PoleTableProps> = ({
                       <button
                         type="button"
                         onClick={() => {
-                          if (targetCab) {
+                           if (targetCab) {
                             onViewCabinetDetail(targetCab)
                           } else {
                             toast.info('Chưa có thông tin mở rộng cho tủ điện này')
@@ -91,40 +91,50 @@ export const PoleTable: React.FC<PoleTableProps> = ({
                         </span>
                       </button>
                     </td>
+                    <td className="p-3.5">
+                      {pole.note ? (
+                        <div
+                          className="inline-flex items-center gap-1.5 max-w-44 text-slate-700 dark:text-slate-300"
+                          title={pole.note}
+                        >
+                          <Bookmark className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                          <span className="truncate font-medium">{pole.note}</span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 dark:text-slate-500 font-mono">—</span>
+                      )}
+                    </td>
                     <td className="p-3.5 text-slate-500 dark:text-slate-300">{pole.commune_id || 'Củ Chi'}</td>
-                    <td className="p-3.5 font-semibold text-slate-800 dark:text-slate-200">
-                      {watt ? `${watt}W` : '—'}
+                    <td className="p-3.5">
+                      {pole.active_fixture ? (
+                        (() => {
+                          const fixtureCode =
+                            pole.active_fixture?.fixture_id ||
+                            (pole.external_ref ? `FIX-${pole.external_ref}` : 'FIX-CHƯA-ĐẶT')
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (onSelectFixture) {
+                                  onSelectFixture(fixtureCode)
+                                } else {
+                                  toast.info(`Mã bóng đèn: ${fixtureCode}`)
+                                }
+                              }}
+                              className="cursor-pointer inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/60 font-semibold shadow-2xs hover:border-amber-400 hover:bg-amber-100/70 transition group"
+                              title={`Mã bóng đèn: ${fixtureCode} — Bấm để chuyển sang tab Bóng đèn`}
+                            >
+                              <Lightbulb className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0 group-hover:scale-110 transition" />
+                              <span className="font-bold font-mono text-xs">{fixtureCode}</span>
+                            </button>
+                          )
+                        })()
+                      ) : (
+                        <span className="text-slate-400 dark:text-slate-500 font-mono">—</span>
+                      )}
                     </td>
                     <td className="p-3.5">
                       <StatusBadge type="fixture" status={fixtureStatus} size="sm" />
-                    </td>
-                    <td className="p-3.5">
-                      {(() => {
-                        if (!warrantyExpiry) {
-                          return <span className="text-slate-400 dark:text-slate-500 font-mono">—</span>
-                        }
-                        const expDate = new Date(warrantyExpiry)
-                        const isExpired = !isNaN(expDate.getTime()) && expDate < new Date()
-                        return (
-                          <div
-                            className="inline-flex items-center gap-1.5"
-                            title={isExpired ? `Đã hết hạn bảo hành từ ${warrantyExpiry}` : `Còn bảo hành đến ${warrantyExpiry}`}
-                          >
-                            <span className={`font-mono text-[11px] ${isExpired ? 'text-slate-400 dark:text-slate-400' : 'text-slate-700 dark:text-slate-300 font-semibold'}`}>
-                              {warrantyExpiry}
-                            </span>
-                            {isExpired ? (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800/80 shrink-0">
-                                Hết hạn
-                              </span>
-                            ) : (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100/80 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800/60 shrink-0">
-                                Còn hạn
-                              </span>
-                            )}
-                          </div>
-                        )
-                      })()}
                     </td>
                     <td className="p-3.5 text-right space-x-1.5 whitespace-nowrap">
                       <button

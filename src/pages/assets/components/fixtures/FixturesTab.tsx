@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Search, Plus, Upload, Filter } from 'lucide-react'
 import type { CreateFixtureRequest } from '../../../../types/assets/fixtures'
 import type { ManagedFixture } from '../../../../hooks/assets/useAssetData'
@@ -11,6 +11,8 @@ import { TablePagination } from '../common/TablePagination'
 export interface FixturesTabProps {
   fixtures: ManagedFixture[]
   poles: PoleListItem[]
+  activeFixtureCode?: string
+  onClearActiveFixture?: () => void
   onAddFixture: (data: CreateFixtureRequest) => void
   onUpdateFixture: (updated: ManagedFixture) => void
   onOpenImport: () => void
@@ -19,6 +21,8 @@ export interface FixturesTabProps {
 export const FixturesTab: React.FC<FixturesTabProps> = ({
   fixtures,
   poles,
+  activeFixtureCode,
+  onClearActiveFixture,
   onAddFixture,
   onUpdateFixture,
   onOpenImport,
@@ -36,14 +40,18 @@ export const FixturesTab: React.FC<FixturesTabProps> = ({
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
 
+  // Flash highlight state
+  const [flashingFixtureCode, setFlashingFixtureCode] = useState<string>('')
+
   // Filtered List
   const filteredFixtures = useMemo(() => {
     const list = fixtures.filter((item) => {
-      // Search by pole_external_ref
+      // Search by pole_external_ref or fixture_id
       const query = searchTerm.toLowerCase().trim()
       const matchSearch =
         !query ||
-        (item.pole_external_ref && item.pole_external_ref.toLowerCase().includes(query))
+        (item.pole_external_ref && item.pole_external_ref.toLowerCase().includes(query)) ||
+        (item.fixture_id && item.fixture_id.toLowerCase().includes(query))
 
       // Filter by Watt
       const matchWatt =
@@ -60,9 +68,38 @@ export const FixturesTab: React.FC<FixturesTabProps> = ({
     })
 
     return [...list].sort((a, b) => {
-      return (a.pole_external_ref || '').localeCompare(b.pole_external_ref || '', undefined, { numeric: true })
+      const codeA = a.fixture_id || (a.pole_external_ref ? `FIX-${a.pole_external_ref}` : '')
+      const codeB = b.fixture_id || (b.pole_external_ref ? `FIX-${b.pole_external_ref}` : '')
+      return codeA.localeCompare(codeB, undefined, { numeric: true })
     })
   }, [fixtures, searchTerm, wattFilter, statusFilter])
+
+  // Trigger flash highlight and jump to appropriate page without overwriting search box
+  useEffect(() => {
+    if (activeFixtureCode) {
+      setFlashingFixtureCode(activeFixtureCode)
+
+      const targetIndex = filteredFixtures.findIndex((f) => {
+        const fixtureId = f.fixture_id || (f.pole_external_ref ? `FIX-${f.pole_external_ref}` : '')
+        return (
+          (fixtureId && fixtureId.toLowerCase() === activeFixtureCode.toLowerCase()) ||
+          (f.pole_external_ref && f.pole_external_ref.toLowerCase() === activeFixtureCode.toLowerCase())
+        )
+      })
+
+      if (targetIndex !== -1) {
+        const targetPage = Math.floor(targetIndex / pageSize) + 1
+        setCurrentPage(targetPage)
+      }
+
+      const timer = setTimeout(() => {
+        setFlashingFixtureCode('')
+        onClearActiveFixture?.()
+      }, 2500)
+
+      return () => clearTimeout(timer)
+    }
+  }, [activeFixtureCode, filteredFixtures, pageSize])
 
   // Paginated List
   const paginatedFixtures = useMemo(() => {
@@ -82,7 +119,7 @@ export const FixturesTab: React.FC<FixturesTabProps> = ({
           <div className="flex-1 min-w-60 relative">
             <input
               type="text"
-              placeholder="Tìm theo mã cột (POLE-0001), công suất, loại bóng..."
+              placeholder="Tìm theo mã bóng (FIX-...), mã cột (POLE-0001), công suất..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value)
@@ -156,6 +193,7 @@ export const FixturesTab: React.FC<FixturesTabProps> = ({
       <FixtureTable
         fixtures={paginatedFixtures}
         poles={poles}
+        flashingFixtureCode={flashingFixtureCode}
         onEditFixture={(f) => setEditingFixture(f)}
       />
 

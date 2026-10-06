@@ -19,7 +19,7 @@ export const EditPoleModal: React.FC<EditPoleModalProps> = ({
 }) => {
   const [lampWatt, setLampWatt] = useState<number>(100)
   const [feederId, setFeederId] = useState('')
-  const [warrantyExpiry, setWarrantyExpiry] = useState('')
+  const [noteText, setNoteText] = useState('')
   const [lat, setLat] = useState<number>(10.9701)
   const [lng, setLng] = useState<number>(106.4896)
 
@@ -27,7 +27,7 @@ export const EditPoleModal: React.FC<EditPoleModalProps> = ({
     if (pole) {
       setLampWatt(pole.active_fixture?.lamp_watt || 100)
       setFeederId(pole.feeder_id || '')
-      setWarrantyExpiry(pole.active_fixture?.warranty_expiry || '')
+      setNoteText(pole.note || '')
       setLat(typeof pole.location?.lat === 'number' ? pole.location.lat : 10.9701)
       setLng(typeof pole.location?.lng === 'number' ? pole.location.lng : 106.4896)
     }
@@ -44,11 +44,11 @@ export const EditPoleModal: React.FC<EditPoleModalProps> = ({
         lat,
         lng,
       },
+      note: noteText.trim() ? noteText.trim() : null,
       active_fixture: pole.active_fixture
         ? {
             ...pole.active_fixture,
             lamp_watt: lampWatt,
-            warranty_expiry: warrantyExpiry || null,
           }
         : undefined,
       updated_at: new Date().toISOString(),
@@ -117,25 +117,29 @@ export const EditPoleModal: React.FC<EditPoleModalProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="font-bold text-slate-700 dark:text-slate-300">Tủ / Lộ Feeder kết nối:</label>
-              <input
-                type="text"
-                value={feederId}
-                onChange={(e) => setFeederId(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-900 dark:text-slate-100 focus:outline-none"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="font-bold text-slate-700 dark:text-slate-300">Bảo hành đến:</label>
-              <input
-                type="date"
-                value={warrantyExpiry}
-                onChange={(e) => setWarrantyExpiry(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-900 dark:text-slate-100 focus:outline-none"
-              />
-            </div>
+          <div className="space-y-1">
+            <label className="font-bold text-slate-700 dark:text-slate-300">Tủ / Lộ Feeder kết nối:</label>
+            <input
+              type="text"
+              value={feederId}
+              onChange={(e) => setFeederId(e.target.value)}
+              className="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-900 dark:text-slate-100 focus:outline-none"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+              <span>Ghi chú:</span>
+              <span className="text-[10px] text-slate-400 font-normal">Tối đa 1000 ký tự</span>
+            </label>
+            <textarea
+              rows={2}
+              maxLength={1000}
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder="Nhập ghi chú hiện trường, điểm tham chiếu thực địa hoặc thông tin bổ sung..."
+              className="w-full p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-[#1f3864]"
+            />
           </div>
 
           {/* Tọa độ WGS84 & Mini-Map */}

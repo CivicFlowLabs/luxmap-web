@@ -176,6 +176,7 @@ export interface WorkOrderPole {
     fixture_type?: FixtureType
     lamp_watt?: number
     work_order_fault_ids: string | null[]
+    note?: string | null
 }
 
 export interface WorkOrderPolePagedResult {

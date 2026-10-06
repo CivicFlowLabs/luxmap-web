@@ -11,7 +11,6 @@ import {
   AlertCircle,
   Zap,
 } from 'lucide-react'
-import { DatePicker } from '../../../../components/DatePicker'
 import type { PoleListItem } from '../../../../types/assets/poles'
 import type { SegmentListItem } from '../../../../types/assets/segments'
 import type { FeederListItem } from '../../../../types/assets/feeders'
@@ -56,20 +55,6 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
   // Top Section States
   const [selectedSegmentId, setSelectedSegmentId] = useState('')
   const [selectedCabinetId, setSelectedCabinetId] = useState('')
-  const [defaultWarranty, setDefaultWarranty] = useState('')
-
-  const warrantyDate = defaultWarranty ? new Date(defaultWarranty.replace(/-/g, '/')) : null
-
-  const handleWarrantyChange = (date: Date | null) => {
-    if (date) {
-      const y = date.getFullYear()
-      const m = String(date.getMonth() + 1).padStart(2, '0')
-      const d = String(date.getDate()).padStart(2, '0')
-      setDefaultWarranty(`${y}-${m}-${d}`)
-    } else {
-      setDefaultWarranty('')
-    }
-  }
 
   // Bottom Section: Pole Rows State
   const [rows, setRows] = useState<PoleRowDraft[]>([])
@@ -93,7 +78,6 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
       setErrorMsg(null)
       setSelectedSegmentId('')
       setSelectedCabinetId('')
-      setDefaultWarranty('')
       setRows([])
     }
   }, [isOpen])
@@ -238,9 +222,9 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
           power_source: 'grid',
           lamp_watt: row.lamp_watt || 100,
           install_date: new Date().toISOString().split('T')[0],
-          warranty_expiry: defaultWarranty || '2026-12-31',
           data_source: 'field',
         },
+        note: row.atlas?.trim() ? row.atlas.trim() : null,
         updated_at: new Date().toISOString(),
       })
     }
@@ -304,7 +288,7 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* 1. Select Segment */}
               <div className="space-y-1">
                 <label className="font-bold text-slate-700 dark:text-slate-300 text-xs flex items-center justify-between">
@@ -363,20 +347,6 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
                     </option>
                   ))}
                 </select>
-              </div>
-
-              {/* 3. Warranty Date */}
-              <div className="space-y-1">
-                <label className="font-semibold text-slate-700 dark:text-slate-300 text-xs flex items-center justify-between">
-                  <span>3. Hạn bảo hành mặc định:</span>
-                  <span className="text-[10px] text-slate-400 font-normal">(Áp dụng cả lô)</span>
-                </label>
-                <DatePicker
-                  value={warrantyDate}
-                  onChange={handleWarrantyChange}
-                  placeholder="Chọn hạn bảo hành"
-                  className="w-full"
-                />
               </div>
             </div>
           </div>
@@ -438,7 +408,7 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
                       <th className="py-2.5 px-3 min-w-28">Vĩ độ (Lat) (*)</th>
                       <th className="py-2.5 px-3 min-w-24">Công suất (W)</th>
                       <th className="py-2.5 px-3 min-w-28 text-center">Nhạy cảm (POI)</th>
-                      <th className="py-2.5 px-3 min-w-32">Ghi chú vị trí</th>
+                      <th className="py-2.5 px-3 min-w-32">Ghi chú</th>
                       <th className="py-2.5 px-3 w-14 text-center">Xóa</th>
                     </tr>
                   </thead>

@@ -3,9 +3,10 @@ import { useDispatch, useSelector } from 'react-redux'
 import { toast } from 'sonner'
 import type { RootState } from '../../redux/rootReducer'
 import { fetchAssetsRequest } from '../../feature/assets/assetSlice'
-import type { PoleListItem } from '../../types/assets/poles'
-import type { FeederListItem } from '../../types/assets/feeders'
-import type { SegmentListItem } from '../../types/assets/segments'
+import { assetAPI } from '../../feature/assets/assetAPI'
+import type { PoleListItem, CreatePoleRequest, UpdatePoleRequest } from '../../types/assets/poles'
+import type { FeederListItem, CreateFeederRequest, UpdateFeederRequest } from '../../types/assets/feeders'
+import type { SegmentListItem, CreateSegmentRequest, UpdateSegmentRequest } from '../../types/assets/segments'
 import type { ActiveFixture, CreateFixtureRequest, RetireFixtureRequest } from '../../types/assets/fixtures'
 
 // ManagedFixture represents an active or historical fixture displayed in the fixtures table
@@ -58,12 +59,17 @@ export function useAssetData() {
   const fixtures: ManagedFixture[] = useMemo(() => {
     return poles
       .filter((p) => p.active_fixture)
-      .map((p) => ({
-        ...(p.active_fixture as ActiveFixture),
-        pole_id: p.pole_id,
-        pole_external_ref: p.external_ref,
-        removed_date: null,
-      }))
+      .map((p) => {
+        const fixtureId =
+          p.active_fixture?.fixture_id ||
+          (p.external_ref ? `FIX-${p.external_ref}` : null)
+        return {
+          ...(p.active_fixture as ActiveFixture),
+          fixture_id: fixtureId,
+          pole_external_ref: p.external_ref,
+          removed_date: null,
+        }
+      })
   }, [poles])
 
   const showBanner = useCallback((msg: string) => {
@@ -73,73 +79,107 @@ export function useAssetData() {
   }, [])
 
   // --- Pole Handlers ---
-  const handleAddPole = (data: PoleListItem) => {
-    handleAddPoles([data])
+  const handleAddPole = async (data: PoleListItem) => {
+    await handleAddPoles([data])
   }
 
-  const handleAddPoles = (dataList: PoleListItem[]) => {
+  const handleAddPoles = async (dataList: PoleListItem[]) => {
     if (!dataList || dataList.length === 0) return
 
-    const targetSegmentId = dataList[0].segment_id
+    try {
+      for (const item of dataList) {
+        const createReq: CreatePoleRequest = {
+          external_ref: item.external_ref || item.pole_id || null,
+          segment_id: item.segment_id || null,
+          feeder_id: item.feeder_id || null,
+          commune_id: item.commune_id || null,
+          geom_wkt: item.location ? `POINT(${item.location.lng} ${item.location.lat})` : null,
+          near_sensitive_poi: !!item.near_sensitive_poi,
+          data_source: item.data_source || 'field',
+          note: item.note ?? null,
+        }
+        await assetAPI.createPole(createReq)
 
-    setPoles((prev) => [...dataList, ...prev])
+        // Nếu có fixture đính kèm thì đăng ký fixture cho cột
+        if (item.active_fixture && item.pole_id) {
+          const fixtureReq: CreateFixtureRequest = {
+            pole_id: item.pole_id,
+            fixture_type: item.active_fixture.fixture_type || 'led_road_lamp',
+            power_source: item.active_fixture.power_source || 'grid',
+            lamp_watt: Number(item.active_fixture.lamp_watt) || 100,
+            install_date: item.active_fixture.install_date || new Date().toISOString().split('T')[0],
+            warranty_expiry: item.active_fixture.warranty_expiry || null,
+            data_source: item.active_fixture.data_source || 'field',
+          }
+          await assetAPI.createFixture(fixtureReq)
+        }
+      }
 
-    // Update pole count for the segment
-    if (targetSegmentId) {
-      setSegments((prev) =>
-        prev.map((s) =>
-          s.segment_id === targetSegmentId
-            ? { ...s, pole_count: (s.pole_count || 0) + dataList.length }
-            : s
-        )
-      )
-    }
+      dispatch(fetchAssetsRequest())
 
-    // Automatically update pole counts for affected feeders/cabinets
-    setCabinets((prev) =>
-      prev.map((cab) => {
-        const addedForThisCab = dataList.filter((item) => item.feeder_id === cab.feeder_id).length
-        return addedForThisCab > 0
-          ? { ...cab, pole_count: (cab.pole_count || 0) + addedForThisCab }
-          : cab
-      })
-    )
-
-    if (dataList.length === 1) {
-      showBanner(`Đã đăng ký thành công cột đèn "${dataList[0].pole_id}" vào Bản đồ GIS!`)
-    } else {
-      showBanner(`Đã đăng ký thành công ${dataList.length} cột đèn vào Bản đồ GIS!`)
+      if (dataList.length === 1) {
+        showBanner(`Đã lưu thành công cột đèn "${dataList[0].external_ref || dataList[0].pole_id}" vào Hệ thống!`)
+      } else {
+        showBanner(`Đã lưu thành công ${dataList.length} cột đèn vào Hệ thống!`)
+      }
+    } catch (err: any) {
+      console.error('Failed to create pole(s):', err)
+      const errorMsg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.message ||
+        'Không thể lưu cột đèn vào hệ thống'
+      toast.error(`Lỗi khi tạo cột: ${errorMsg}`)
     }
   }
 
-  const handleUpdatePole = (updated: PoleListItem) => {
-    setPoles((prev) =>
-      prev.map((item) => (item.pole_id === updated.pole_id ? updated : item))
-    )
-    showBanner(`Đã cập nhật thông số và tọa độ cột đèn "${updated.pole_id}"!`)
+  const handleUpdatePole = async (updated: PoleListItem) => {
+    if (!updated.pole_id) {
+      toast.error('Thiếu mã định danh cột để cập nhật!')
+      return
+    }
+
+    try {
+      const updateReq: UpdatePoleRequest = {
+        external_ref: updated.external_ref || updated.pole_id,
+        segment_id: updated.segment_id || null,
+        feeder_id: updated.feeder_id || null,
+        geom_wkt: updated.location ? `POINT(${updated.location.lng} ${updated.location.lat})` : null,
+        near_sensitive_poi: !!updated.near_sensitive_poi,
+        data_source: updated.data_source || 'field',
+        note: updated.note ?? null,
+      }
+
+      await assetAPI.updatePole(updated.pole_id, updateReq)
+      dispatch(fetchAssetsRequest())
+
+      showBanner(`Đã cập nhật thông số cột đèn "${updated.external_ref || updated.pole_id}"!`)
+    } catch (err: any) {
+      console.error('Failed to update pole:', err)
+      const errorMsg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.message ||
+        'Không thể cập nhật cột đèn'
+      toast.error(`Lỗi khi cập nhật cột: ${errorMsg}`)
+    }
   }
 
   // --- Fixture Handlers ---
-  const handleAddFixture = (data: CreateFixtureRequest) => {
-    const newActiveFixture: ActiveFixture = {
-      fixture_id: `FIX-${Date.now().toString().slice(-4)}`,
-      fixture_type: data.fixture_type,
-      power_source: data.power_source,
-      lamp_watt: data.lamp_watt,
-      install_date: data.install_date,
-      warranty_expiry: data.warranty_expiry,
-      data_source: data.data_source,
+  const handleAddFixture = async (data: CreateFixtureRequest) => {
+    try {
+      await assetAPI.createFixture(data)
+      dispatch(fetchAssetsRequest())
+      showBanner(`Đã thêm bóng đèn mới gắn vào cột "${data.pole_id}"!`)
+    } catch (err: any) {
+      console.error('Failed to create fixture:', err)
+      const errorMsg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.message ||
+        'Không thể thêm bóng đèn'
+      toast.error(`Lỗi khi thêm bóng đèn: ${errorMsg}`)
     }
-
-    // Attach to the pole directly
-    setPoles((prev) =>
-      prev.map((p) =>
-        p.pole_id === data.pole_id
-          ? { ...p, active_fixture: newActiveFixture }
-          : p
-      )
-    )
-    showBanner(`Đã thêm bóng đèn mới gắn vào cột "${data.pole_id}"!`)
   }
 
   const handleUpdateFixture = (updated: ManagedFixture) => {
@@ -160,55 +200,152 @@ export function useAssetData() {
     showBanner(`Đã cập nhật thông số bóng đèn "${updated.fixture_id}"!`)
   }
 
-  const handleRetireFixture = (fixtureId: string, req: RetireFixtureRequest) => {
-    setPoles((prev) =>
-      prev.map((p) => {
-        if (p.active_fixture?.fixture_id === fixtureId) {
-          if (req.removed_date) {
-            // Retire / remove fixture from the pole
-            return { ...p, active_fixture: undefined }
-          }
-        }
-        return p
-      })
-    )
-    showBanner(
-      req.removed_date
-        ? `Đã đăng ký tháo dỡ bóng đèn "${fixtureId}"!`
-        : `Đã kích hoạt lại bóng đèn "${fixtureId}"!`
-    )
+  const handleRetireFixture = async (fixtureId: string, req: RetireFixtureRequest) => {
+    try {
+      await assetAPI.retireFixture(fixtureId, req)
+      dispatch(fetchAssetsRequest())
+      showBanner(
+        req.removed_date
+          ? `Đã đăng ký tháo dỡ bóng đèn "${fixtureId}"!`
+          : `Đã kích hoạt lại bóng đèn "${fixtureId}"!`
+      )
+    } catch (err: any) {
+      console.error('Failed to retire fixture:', err)
+      const errorMsg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.message ||
+        'Không thể thao tác bóng đèn'
+      toast.error(`Lỗi thao tác bóng đèn: ${errorMsg}`)
+    }
   }
 
   // --- Cabinet / Feeder Handlers ---
-  const handleAddCabinet = (data: FeederListItem) => {
-    handleAddCabinets([data])
+  const handleAddCabinet = async (data: FeederListItem) => {
+    await handleAddCabinets([data])
   }
 
-  const handleAddCabinets = (newCabinetsList: FeederListItem[]) => {
-    if (newCabinetsList.length === 0) return
+  const handleAddCabinets = async (newCabinetsList: FeederListItem[]) => {
+    if (!newCabinetsList || newCabinetsList.length === 0) return
 
-    setCabinets((prev) => [...newCabinetsList, ...prev])
-    showBanner(`Đã lưu thành công ${newCabinetsList.length} tủ điện vào Bản đồ GIS!`)
+    try {
+      for (const item of newCabinetsList) {
+        const createReq: CreateFeederRequest = {
+          external_ref: item.external_ref || item.feeder_id || null,
+          feeder_name: item.feeder_name || item.feeder_id || 'Tủ điện mới',
+          commune_id: item.commune_id || 'COM-001',
+          geom_wkt: (item as any).location
+            ? `POINT(${(item as any).location.lng} ${(item as any).location.lat})`
+            : null,
+        }
+        await assetAPI.createFeeder(createReq)
+      }
+
+      dispatch(fetchAssetsRequest())
+
+      if (newCabinetsList.length === 1) {
+        showBanner(`Đã lưu thành công tủ điện "${newCabinetsList[0].feeder_name || newCabinetsList[0].feeder_id}" vào Hệ thống!`)
+      } else {
+        showBanner(`Đã lưu thành công ${newCabinetsList.length} tủ điện vào Hệ thống!`)
+      }
+    } catch (err: any) {
+      console.error('Failed to create cabinet(s):', err)
+      const errorMsg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.message ||
+        'Không thể lưu tủ điện vào hệ thống'
+      toast.error(`Lỗi khi tạo tủ điện: ${errorMsg}`)
+    }
   }
 
-  const handleUpdateCabinet = (updated: FeederListItem) => {
-    setCabinets((prev) =>
-      prev.map((item) => (item.feeder_id === updated.feeder_id ? updated : item))
-    )
-    showBanner(`Đã cập nhật thông số và tọa độ tủ điện "${updated.feeder_name || updated.feeder_id}"!`)
+  const handleUpdateCabinet = async (updated: FeederListItem) => {
+    if (!updated.feeder_id) {
+      toast.error('Thiếu mã định danh tủ điện để cập nhật!')
+      return
+    }
+
+    try {
+      const updateReq: UpdateFeederRequest = {
+        external_ref: updated.external_ref || updated.feeder_id,
+        feeder_name: updated.feeder_name || updated.feeder_id,
+        geom_wkt: (updated as any).location
+          ? `POINT(${(updated as any).location.lng} ${(updated as any).location.lat})`
+          : null,
+      }
+
+      await assetAPI.updateFeeder(updated.feeder_id, updateReq)
+      dispatch(fetchAssetsRequest())
+
+      showBanner(`Đã cập nhật thông số tủ điện "${updated.feeder_name || updated.feeder_id}"!`)
+    } catch (err: any) {
+      console.error('Failed to update cabinet:', err)
+      const errorMsg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.message ||
+        'Không thể cập nhật tủ điện'
+      toast.error(`Lỗi khi cập nhật tủ điện: ${errorMsg}`)
+    }
   }
 
   // --- Segment Handlers ---
-  const handleAddSegment = (data: SegmentListItem) => {
-    setSegments((prev) => [data, ...prev])
-    showBanner(`Đã tạo tuyến đường mới "${data.segment_name}" thành công!`)
+  const handleAddSegment = async (data: SegmentListItem) => {
+    try {
+      const createReq: CreateSegmentRequest = {
+        external_ref: data.external_ref || data.segment_id || null,
+        segment_name: data.segment_name || 'Tuyến đường mới',
+        road_class: data.road_class || 'inter_commune',
+        length_m: Number(data.length_m) || 0,
+        commune_id: data.commune_id || 'COM-001',
+        geom_wkt: (data as any).geom_wkt || 'LINESTRING(106.5 10.9, 106.51 10.91)',
+        data_source: data.data_source || 'field',
+      }
+
+      await assetAPI.createSegment(createReq)
+      dispatch(fetchAssetsRequest())
+
+      showBanner(`Đã tạo tuyến đường mới "${data.segment_name}" thành công!`)
+    } catch (err: any) {
+      console.error('Failed to create segment:', err)
+      const errorMsg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.message ||
+        'Không thể tạo tuyến đường'
+      toast.error(`Lỗi khi tạo tuyến đường: ${errorMsg}`)
+    }
   }
 
-  const handleUpdateSegment = (updated: SegmentListItem) => {
-    setSegments((prev) =>
-      prev.map((item) => (item.segment_id === updated.segment_id ? updated : item))
-    )
-    showBanner(`Đã cập nhật thông tin tuyến đường "${updated.segment_name}"!`)
+  const handleUpdateSegment = async (updated: SegmentListItem) => {
+    if (!updated.segment_id) {
+      toast.error('Thiếu mã định danh tuyến đường để cập nhật!')
+      return
+    }
+
+    try {
+      const updateReq: UpdateSegmentRequest = {
+        external_ref: updated.external_ref || updated.segment_id,
+        segment_name: updated.segment_name,
+        road_class: updated.road_class || 'inter_commune',
+        length_m: Number(updated.length_m) || 0,
+        geom_wkt: (updated as any).geom_wkt || null,
+        data_source: updated.data_source || 'field',
+      }
+
+      await assetAPI.updateSegment(updated.segment_id, updateReq)
+      dispatch(fetchAssetsRequest())
+
+      showBanner(`Đã cập nhật thông tin tuyến đường "${updated.segment_name}"!`)
+    } catch (err: any) {
+      console.error('Failed to update segment:', err)
+      const errorMsg =
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.message ||
+        'Không thể cập nhật tuyến đường'
+      toast.error(`Lỗi khi cập nhật tuyến đường: ${errorMsg}`)
+    }
   }
 
   // --- Import Handler ---
