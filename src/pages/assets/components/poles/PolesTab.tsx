@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Search, Plus, Upload, Filter } from 'lucide-react'
 import type { PoleListItem } from '../../../../types/assets/poles'
 import type { FeederListItem } from '../../../../types/assets/feeders'
@@ -14,30 +14,41 @@ export interface PolesTabProps {
   poles: PoleListItem[]
   cabinets: FeederListItem[]
   segments: SegmentListItem[]
+  isLoading?: boolean
+  activePoleCode?: string
+  onClearActivePole?: () => void
   onAddPole: (data: PoleListItem) => void
   onAddPoles: (dataList: PoleListItem[]) => void
   onUpdatePole: (updated: PoleListItem) => void
   onOpenImport: () => void
   onViewCabinetDetail?: (cabinet: FeederListItem) => void
   onSelectFixture?: (fixtureCode: string) => void
+  onSelectCabinet?: (cabinetCode: string) => void
 }
 
 export const PolesTab: React.FC<PolesTabProps> = ({
   poles,
   cabinets,
   segments,
+  isLoading = false,
+  activePoleCode,
+  onClearActivePole,
   onAddPole,
   onAddPoles,
   onUpdatePole,
   onOpenImport,
   onViewCabinetDetail,
   onSelectFixture,
+  onSelectCabinet,
 }) => {
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
+
+  // Flash highlight state
+  const [flashingPoleCode, setFlashingPoleCode] = useState<string>('')
 
   // Modals state
   const [isAddPoleModalOpen, setIsAddPoleModalOpen] = useState(false)
@@ -81,6 +92,29 @@ export const PolesTab: React.FC<PolesTabProps> = ({
     const start = (currentPage - 1) * pageSize
     return filteredPoles.slice(start, start + pageSize)
   }, [filteredPoles, currentPage, pageSize])
+
+  // Trigger flash highlight and jump to appropriate page when activePoleCode is provided
+  useEffect(() => {
+    if (activePoleCode) {
+      setFlashingPoleCode(activePoleCode)
+
+      const targetIndex = filteredPoles.findIndex(
+        (p) => p.external_ref && p.external_ref.toLowerCase() === activePoleCode.toLowerCase()
+      )
+
+      if (targetIndex !== -1) {
+        const targetPage = Math.floor(targetIndex / pageSize) + 1
+        setCurrentPage(targetPage)
+      }
+
+      const timer = setTimeout(() => {
+        setFlashingPoleCode('')
+        onClearActivePole?.()
+      }, 2500)
+
+      return () => clearTimeout(timer)
+    }
+  }, [activePoleCode, filteredPoles, pageSize])
 
   const handleSavePole = (updated: PoleListItem) => {
     onUpdatePole(updated)
@@ -161,10 +195,13 @@ export const PolesTab: React.FC<PolesTabProps> = ({
         poles={paginatedPoles}
         cabinets={cabinets}
         segments={segments}
+        isLoading={isLoading}
+        flashingPoleCode={flashingPoleCode}
         onViewDetail={(pole) => setDetailPole(pole)}
         onEdit={(pole) => setEditPole(pole)}
         onViewCabinetDetail={handleCabinetClick}
         onSelectFixture={onSelectFixture}
+        onSelectCabinet={onSelectCabinet}
       />
 
       {/* Pagination Footer */}
@@ -174,6 +211,7 @@ export const PolesTab: React.FC<PolesTabProps> = ({
         pageSize={pageSize}
         totalPages={totalPages}
         unitLabel="cột điện"
+        isLoading={isLoading}
         onPageChange={setCurrentPage}
       />
 

@@ -13,19 +13,23 @@ export interface FixturesTabProps {
   poles: PoleListItem[]
   activeFixtureCode?: string
   onClearActiveFixture?: () => void
+  isLoading?: boolean
   onAddFixture: (data: CreateFixtureRequest) => void
   onUpdateFixture: (updated: ManagedFixture) => void
   onOpenImport: () => void
+  onSelectPole?: (poleCode: string) => void
 }
 
 export const FixturesTab: React.FC<FixturesTabProps> = ({
   fixtures,
   poles,
   activeFixtureCode,
+  isLoading = false,
   onClearActiveFixture,
   onAddFixture,
   onUpdateFixture,
   onOpenImport,
+  onSelectPole,
 }) => {
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('')
@@ -194,7 +198,9 @@ export const FixturesTab: React.FC<FixturesTabProps> = ({
         fixtures={paginatedFixtures}
         poles={poles}
         flashingFixtureCode={flashingFixtureCode}
+        isLoading={isLoading}
         onEditFixture={(f) => setEditingFixture(f)}
+        onSelectPole={onSelectPole}
       />
 
       {/* Pagination */}
@@ -204,6 +210,7 @@ export const FixturesTab: React.FC<FixturesTabProps> = ({
         pageSize={pageSize}
         totalPages={totalPages}
         unitLabel="bóng đèn"
+        isLoading={isLoading}
         onPageChange={(page) => setCurrentPage(page)}
       />
 

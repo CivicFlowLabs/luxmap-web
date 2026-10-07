@@ -9,6 +9,7 @@ import { TablePagination } from '../common/TablePagination'
 
 export interface SegmentsTabProps {
   segments: SegmentListItem[]
+  isLoading?: boolean
   onAddSegment: (data: SegmentListItem) => void
   onUpdateSegment: (updated: SegmentListItem) => void
   onOpenImport: () => void
@@ -16,6 +17,7 @@ export interface SegmentsTabProps {
 
 export const SegmentsTab: React.FC<SegmentsTabProps> = ({
   segments,
+  isLoading = false,
   onAddSegment,
   onUpdateSegment,
   onOpenImport,
@@ -131,6 +133,7 @@ export const SegmentsTab: React.FC<SegmentsTabProps> = ({
       {/* Segments Table */}
       <SegmentTable
         segments={paginatedSegments}
+        isLoading={isLoading}
         onViewDetail={(seg) => setDetailSegment(seg)}
         onEdit={(seg) => setEditSegment(seg)}
       />
@@ -142,6 +145,7 @@ export const SegmentsTab: React.FC<SegmentsTabProps> = ({
         pageSize={pageSize}
         totalPages={totalPages}
         unitLabel="tuyến đường"
+        isLoading={isLoading}
         onPageChange={setCurrentPage}
       />
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Search, Plus, Upload, Filter } from 'lucide-react'
 import type { FeederListItem } from '../../../../types/assets/feeders'
 import type { SegmentListItem } from '../../../../types/assets/segments'
@@ -11,6 +11,9 @@ import { TablePagination } from '../common/TablePagination'
 export interface CabinetsTabProps {
   cabinets: FeederListItem[]
   segments: SegmentListItem[]
+  isLoading?: boolean
+  activeCabinetCode?: string
+  onClearActiveCabinet?: () => void
   onAddCabinet: (data: FeederListItem) => void
   onAddCabinets: (dataList: FeederListItem[]) => void
   onUpdateCabinet: (updated: FeederListItem) => void
@@ -20,6 +23,9 @@ export interface CabinetsTabProps {
 export const CabinetsTab: React.FC<CabinetsTabProps> = ({
   cabinets,
   segments,
+  isLoading = false,
+  activeCabinetCode,
+  onClearActiveCabinet,
   onAddCabinet,
   onAddCabinets,
   onUpdateCabinet,
@@ -30,6 +36,9 @@ export const CabinetsTab: React.FC<CabinetsTabProps> = ({
   const [statusFilter, setStatusFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
+
+  // Flash highlight state
+  const [flashingCabinetCode, setFlashingCabinetCode] = useState<string>('')
 
   // Modals state
   const [isAddCabinetModalOpen, setIsAddCabinetModalOpen] = useState(false)
@@ -65,6 +74,29 @@ export const CabinetsTab: React.FC<CabinetsTabProps> = ({
     const start = (currentPage - 1) * pageSize
     return filteredCabinets.slice(start, start + pageSize)
   }, [filteredCabinets, currentPage, pageSize])
+
+  // Trigger flash highlight and jump to appropriate page when activeCabinetCode is provided
+  useEffect(() => {
+    if (activeCabinetCode) {
+      setFlashingCabinetCode(activeCabinetCode)
+
+      const targetIndex = filteredCabinets.findIndex(
+        (c) => c.external_ref && c.external_ref.toLowerCase() === activeCabinetCode.toLowerCase()
+      )
+
+      if (targetIndex !== -1) {
+        const targetPage = Math.floor(targetIndex / pageSize) + 1
+        setCurrentPage(targetPage)
+      }
+
+      const timer = setTimeout(() => {
+        setFlashingCabinetCode('')
+        onClearActiveCabinet?.()
+      }, 2500)
+
+      return () => clearTimeout(timer)
+    }
+  }, [activeCabinetCode, filteredCabinets, pageSize, onClearActiveCabinet])
 
   const handleSaveCabinet = (updated: FeederListItem) => {
     onUpdateCabinet(updated)
@@ -138,6 +170,8 @@ export const CabinetsTab: React.FC<CabinetsTabProps> = ({
       {/* Cabinets Table */}
       <CabinetTable
         cabinets={paginatedCabinets}
+        isLoading={isLoading}
+        flashingCabinetCode={flashingCabinetCode}
         onViewDetail={(cab) => setDetailCabinet(cab)}
         onEdit={(cab) => setEditCabinet(cab)}
       />
@@ -149,6 +183,7 @@ export const CabinetsTab: React.FC<CabinetsTabProps> = ({
         pageSize={pageSize}
         totalPages={totalPages}
         unitLabel="tủ điện"
+        isLoading={isLoading}
         onPageChange={setCurrentPage}
       />
 
