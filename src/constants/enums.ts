@@ -90,6 +90,24 @@ export enum DataSource {
 }
 
 /**
+ * Nhãn hiển thị tiếng Việt thân thiện cho nguồn dữ liệu
+ */
+export const DATA_SOURCE_LABELS: Record<string, string> = {
+  field: 'Khảo sát thực địa',
+  public_imagery: 'Ảnh vệ tinh / Bản đồ số',
+  calibration_rig: 'Thiết bị đo chuẩn',
+  simulated: 'Dữ liệu mô phỏng',
+}
+
+/**
+ * Lấy nhãn tiếng Việt tương ứng cho nguồn dữ liệu
+ */
+export function getDataSourceDisplayName(source?: string | null): string {
+  if (!source) return 'Khảo sát thực địa'
+  return DATA_SOURCE_LABELS[source] || source
+}
+
+/**
  * Trạng thái Lệnh sửa chữa / Phiếu bảo trì (Work Order)
  */
 export enum WorkOrderStatus {
