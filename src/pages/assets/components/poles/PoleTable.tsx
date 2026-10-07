@@ -1,30 +1,50 @@
-import React from 'react'
-import { Eye, Edit2, Zap, Bookmark, Lightbulb } from 'lucide-react'
+import React, { useEffect } from 'react'
+import { Eye, Edit2, Zap, Bookmark, Lightbulb, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
 import { StatusBadge } from '../../../../components/StatusBadge'
 import type { PoleListItem } from '../../../../types/assets/poles'
 import type { FeederListItem } from '../../../../types/assets/feeders'
 import type { SegmentListItem } from '../../../../types/assets/segments'
+import { PoleTableSkeleton } from './PoleTableSkeleton'
 
 export interface PoleTableProps {
   poles: PoleListItem[]
   cabinets: FeederListItem[]
   segments: SegmentListItem[]
+  isLoading?: boolean
+  flashingPoleCode?: string
   onViewDetail: (pole: PoleListItem) => void
   onEdit: (pole: PoleListItem) => void
   onViewCabinetDetail: (cabinet: FeederListItem) => void
   onSelectFixture?: (fixtureCode: string) => void
+  onSelectCabinet?: (cabinetCode: string) => void
 }
 
 export const PoleTable: React.FC<PoleTableProps> = ({
   poles,
   cabinets,
   segments,
+  isLoading = false,
+  flashingPoleCode,
   onViewDetail,
   onEdit,
   onViewCabinetDetail,
   onSelectFixture,
+  onSelectCabinet,
 }) => {
+  // Scroll to active flashing pole row smoothly
+  useEffect(() => {
+    if (flashingPoleCode) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`pole-row-${flashingPoleCode.toLowerCase()}`)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [flashingPoleCode])
+
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md overflow-hidden">
       <div className="overflow-x-auto">
@@ -34,6 +54,7 @@ export const PoleTable: React.FC<PoleTableProps> = ({
               <th className="p-3.5">Mã cột</th>
               <th className="p-3.5">Tuyến đường</th>
               <th className="p-3.5">Tủ điện nguồn</th>
+              <th className="p-3.5">Tọa độ GIS</th>
               <th className="p-3.5">Ghi chú</th>
               <th className="p-3.5">Địa bàn</th>
               <th className="p-3.5">Mã bóng</th>
@@ -42,9 +63,11 @@ export const PoleTable: React.FC<PoleTableProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
-            {poles.length === 0 ? (
+            {isLoading ? (
+              <PoleTableSkeleton rowCount={8} />
+            ) : poles.length === 0 ? (
               <tr>
-                <td colSpan={8} className="p-8 text-center text-slate-400 dark:text-slate-400 text-xs">
+                <td colSpan={9} className="p-8 text-center text-slate-400 dark:text-slate-400 text-xs">
                   Không tìm thấy cột đèn nào phù hợp với bộ lọc hiện tại.
                 </td>
               </tr>
@@ -60,9 +83,21 @@ export const PoleTable: React.FC<PoleTableProps> = ({
                 )
                 const feederLabel = targetCab?.feeder_name || targetCab?.external_ref || 'Chưa gắn'
                 const fixtureStatus = pole.active_fixture ? 'normal' : 'out'
+                const poleExternal = pole.external_ref || ''
+                const isFlashing = Boolean(
+                  flashingPoleCode &&
+                  poleExternal &&
+                  poleExternal.toLowerCase() === flashingPoleCode.toLowerCase()
+                )
 
                 return (
-                  <tr key={pole.external_ref || pole.pole_id || Math.random()} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/80 transition">
+                  <tr
+                    key={pole.external_ref || pole.pole_id || Math.random()}
+                    id={poleExternal ? `pole-row-${poleExternal.toLowerCase()}` : undefined}
+                    className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/80 transition ${
+                      isFlashing ? 'animate-row-flash' : ''
+                    }`}
+                  >
                     <td className="p-3.5 font-bold font-mono text-slate-900 dark:text-white">
                       {pole.external_ref}
                     </td>
@@ -73,7 +108,9 @@ export const PoleTable: React.FC<PoleTableProps> = ({
                       <button
                         type="button"
                         onClick={() => {
-                           if (targetCab) {
+                          if (targetCab?.external_ref && onSelectCabinet) {
+                            onSelectCabinet(targetCab.external_ref)
+                          } else if (targetCab) {
                             onViewCabinetDetail(targetCab)
                           } else {
                             toast.info('Chưa có thông tin mở rộng cho tủ điện này')
@@ -90,6 +127,17 @@ export const PoleTable: React.FC<PoleTableProps> = ({
                           {feederLabel}
                         </span>
                       </button>
+                    </td>
+                    {/* Tọa độ GIS */}
+                    <td className="p-3.5">
+                      {pole.location && (pole.location.lat || pole.location.lng) ? (
+                        <div className="inline-flex items-center gap-1.5 text-[11px] font-mono text-slate-700 dark:text-slate-300">
+                          <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                          <span>{pole.location.lat.toFixed(5)}, {pole.location.lng.toFixed(5)}</span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 dark:text-slate-500 font-mono text-xs">—</span>
+                      )}
                     </td>
                     <td className="p-3.5">
                       {pole.note ? (

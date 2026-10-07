@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom'
 import { X, Route, MapPin, CheckCircle2, Edit3 } from 'lucide-react'
 import { SegmentRouteMap } from '../../../../components/SegmentRouteMap'
 import type { SegmentListItem } from '../../../../types/assets/segments'
+import { getDataSourceDisplayName } from '../../../../constants/enums'
+import { formatCommuneDisplayName } from '../../../../constants/communes'
 
 interface SegmentDetailModalProps {
   segment: SegmentListItem | null
@@ -73,11 +75,11 @@ export const SegmentDetailModal: React.FC<SegmentDetailModalProps> = ({
 
             <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl">
               <div className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider">Nguồn dữ liệu</div>
-              <div className="text-lg font-black text-emerald-700 dark:text-emerald-400 mt-1 flex items-center justify-center gap-1">
-                <span>{segment.data_source || 'GIS'}</span>
+              <div className="text-sm font-black text-emerald-700 dark:text-emerald-400 mt-1 flex items-center justify-center gap-1">
+                <span>{getDataSourceDisplayName(segment.data_source)}</span>
               </div>
               <div className="text-[10px] text-slate-400 dark:text-slate-500">
-                Khảo sát thực địa
+                Phương thức thu thập GIS
               </div>
             </div>
           </div>
@@ -89,7 +91,7 @@ export const SegmentDetailModal: React.FC<SegmentDetailModalProps> = ({
                 <MapPin className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400" />
                 <span>Địa bàn quản lý:</span>
               </span>
-              <strong className="text-slate-800 dark:text-slate-200">{segment.commune_id || 'Củ Chi'}</strong>
+              <strong className="text-slate-800 dark:text-slate-200">{formatCommuneDisplayName(segment.commune_id)}</strong>
             </div>
 
             <div className="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-700/60 pb-2">

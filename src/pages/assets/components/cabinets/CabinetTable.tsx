@@ -1,18 +1,37 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Eye, Edit2, Zap, CheckCircle, MapPin } from 'lucide-react'
 import type { FeederListItem } from '../../../../types/assets/feeders'
+import { CabinetTableSkeleton } from './CabinetTableSkeleton'
+import { getCommuneName } from '../../../../constants/communes'
 
 export interface CabinetTableProps {
   cabinets: FeederListItem[]
+  isLoading?: boolean
+  flashingCabinetCode?: string
   onViewDetail: (cabinet: FeederListItem) => void
   onEdit: (cabinet: FeederListItem) => void
 }
 
 export const CabinetTable: React.FC<CabinetTableProps> = ({
   cabinets,
+  isLoading = false,
+  flashingCabinetCode,
   onViewDetail,
   onEdit,
 }) => {
+  // Scroll to active flashing cabinet row smoothly
+  useEffect(() => {
+    if (flashingCabinetCode) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`cabinet-row-${flashingCabinetCode.toLowerCase()}`)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [flashingCabinetCode])
+
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-md overflow-hidden">
       <div className="overflow-x-auto">
@@ -29,15 +48,31 @@ export const CabinetTable: React.FC<CabinetTableProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
-            {cabinets.length === 0 ? (
+            {isLoading ? (
+              <CabinetTableSkeleton rowCount={8} />
+            ) : cabinets.length === 0 ? (
               <tr>
                 <td colSpan={7} className="p-8 text-center text-slate-400 dark:text-slate-400 text-xs">
                   Không tìm thấy tủ điện nào phù hợp với bộ lọc hiện tại.
                 </td>
               </tr>
             ) : (
-              cabinets.map((cab) => (
-                <tr key={cab.external_ref || cab.feeder_id || Math.random()} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/80 transition">
+              cabinets.map((cab) => {
+                const cabExternal = cab.external_ref || ''
+                const isFlashing = Boolean(
+                  flashingCabinetCode &&
+                  cabExternal &&
+                  cabExternal.toLowerCase() === flashingCabinetCode.toLowerCase()
+                )
+
+                return (
+                  <tr
+                    key={cab.external_ref || cab.feeder_id || Math.random()}
+                    id={cabExternal ? `cabinet-row-${cabExternal.toLowerCase()}` : undefined}
+                    className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/80 transition ${
+                      isFlashing ? 'animate-row-flash' : ''
+                    }`}
+                  >
                   <td className="p-3.5 font-bold font-mono text-slate-900 dark:text-white">
                     {cab.external_ref}
                   </td>
@@ -47,8 +82,8 @@ export const CabinetTable: React.FC<CabinetTableProps> = ({
                       <span>{cab.feeder_name || cab.external_ref}</span>
                     </div>
                   </td>
-                  <td className="p-3.5 text-slate-600 dark:text-slate-300">
-                    {cab.commune_id || 'Củ Chi'}
+                  <td className="p-3.5 text-slate-600 dark:text-slate-300 font-medium">
+                    {getCommuneName(cab.commune_id)}
                   </td>
                   <td className="p-3.5 font-bold text-slate-800 dark:text-slate-200 font-mono">
                     {cab.pole_count} cột
@@ -84,9 +119,10 @@ export const CabinetTable: React.FC<CabinetTableProps> = ({
                     </button>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
+              )
+            })
+          )}
+        </tbody>
         </table>
       </div>
     </div>

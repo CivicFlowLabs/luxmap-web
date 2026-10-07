@@ -37,6 +37,7 @@ import {
   type FieldDiff,
   type ParsedItemReview,
 } from '../../../validations/assetImport.schema'
+import { formatCommuneDisplayName, getCommuneName } from '../../../constants/communes'
 
 export type { FieldDiff, ParsedItemReview }
 
@@ -638,8 +639,8 @@ export const ImportAssetModal: React.FC<ImportAssetModalProps> = ({
                                     {item.segmentName}
                                   </div>
                                   {item.communeId && (
-                                    <div className="text-[10px] text-slate-500 font-mono">
-                                      Xã: {item.communeId}
+                                    <div className="text-[10px] text-slate-500 font-medium">
+                                      Địa bàn: {formatCommuneDisplayName(item.communeId)}
                                     </div>
                                   )}
                                 </>
@@ -649,8 +650,8 @@ export const ImportAssetModal: React.FC<ImportAssetModalProps> = ({
                                     {item.cabinetName}
                                   </div>
                                   {item.communeId && (
-                                    <div className="text-[10px] text-slate-500 font-mono">
-                                      Xã: {item.communeId}
+                                    <div className="text-[10px] text-slate-500 font-medium">
+                                      Địa bàn: {formatCommuneDisplayName(item.communeId)}
                                     </div>
                                   )}
                                 </>
@@ -691,7 +692,7 @@ export const ImportAssetModal: React.FC<ImportAssetModalProps> = ({
                               ) : category === 'cabinets' ? (
                                 <div>
                                   <span className="font-bold text-slate-800">Trạm tủ hạ thế</span>
-                                  {item.communeId ? ` • Xã ${item.communeId}` : ''}
+                                  {item.communeId ? ` • ${getCommuneName(item.communeId)}` : ''}
                                 </div>
                               ) : (
                                 <>
@@ -715,7 +716,7 @@ export const ImportAssetModal: React.FC<ImportAssetModalProps> = ({
                                     : category === 'segments'
                                       ? `Tuyến: ${item.segmentName} • Dài: ${item.lengthM}m • Cấp: ${item.roadClass === 'inter_commune' ? 'Liên xã' : 'Liên thôn'}`
                                       : category === 'cabinets'
-                                        ? `Tủ: ${item.cabinetName} • Xã: ${item.communeId}`
+                                        ? `Tủ: ${item.cabinetName} • ${formatCommuneDisplayName(item.communeId)}`
                                         : `Tạo mới (${item.lampWatt}W, ${item.segmentName})${item.note ? ` • Ghi chú: ${item.note}` : ''}`}
                                 </div>
                               ) : (

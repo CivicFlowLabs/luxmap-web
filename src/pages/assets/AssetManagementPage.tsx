@@ -11,6 +11,7 @@ import { FixturesTab } from './components/fixtures/FixturesTab'
 import { CabinetsTab } from './components/cabinets/CabinetsTab'
 import { SegmentsTab } from './components/segments/SegmentsTab'
 import { ImportAssetModal } from './components/ImportAssetModal'
+import { TabCountBadge } from './components/common/TabCountBadge'
 import { useAssetData } from '../../hooks/assets/useAssetData'
 
 export type AssetCategory = 'poles' | 'fixtures' | 'cabinets' | 'segments' | 'poles_and_fixtures'
@@ -19,10 +20,22 @@ export const AssetManagementPage: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<AssetCategory>('poles')
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [selectedFixtureCode, setSelectedFixtureCode] = useState<string>('')
+  const [selectedPoleCode, setSelectedPoleCode] = useState<string>('')
+  const [selectedCabinetCode, setSelectedCabinetCode] = useState<string>('')
 
   const handleSelectFixture = (fixtureCode: string) => {
     setSelectedFixtureCode(fixtureCode)
     setActiveCategory('fixtures')
+  }
+
+  const handleSelectPole = (poleCode: string) => {
+    setSelectedPoleCode(poleCode)
+    setActiveCategory('poles')
+  }
+
+  const handleSelectCabinet = (cabinetCode: string) => {
+    setSelectedCabinetCode(cabinetCode)
+    setActiveCategory('cabinets')
   }
 
   const {
@@ -30,6 +43,7 @@ export const AssetManagementPage: React.FC = () => {
     fixtures,
     cabinets,
     segments,
+    isLoadingAssets,
     successBanner,
     handleAddPole,
     handleAddPoles,
@@ -85,6 +99,7 @@ export const AssetManagementPage: React.FC = () => {
             type="button"
             onClick={() => {
               setSelectedFixtureCode('')
+              setSelectedCabinetCode('')
               setActiveCategory('poles')
             }}
             className={`relative z-10 py-2.5 px-4 rounded-xl text-xs transition-colors duration-200 flex items-center justify-center gap-2 cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus:ring-0 border-0 ${
@@ -101,15 +116,12 @@ export const AssetManagementPage: React.FC = () => {
               }`}
             />
             <span>Cột điện</span>
-            <span
-              className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
-                activeCategory === 'poles' || activeCategory === 'poles_and_fixtures'
-                  ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/70 dark:border-blue-800 shadow-2xs'
-                  : 'bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-              }`}
-            >
-              {poles.length}
-            </span>
+            <TabCountBadge
+              count={poles.length}
+              isLoading={isLoadingAssets}
+              isActive={activeCategory === 'poles' || activeCategory === 'poles_and_fixtures'}
+              colorScheme="blue"
+            />
           </button>
 
           {/* Tab 2: Bóng đèn */}
@@ -117,6 +129,8 @@ export const AssetManagementPage: React.FC = () => {
             type="button"
             onClick={() => {
               setSelectedFixtureCode('')
+              setSelectedPoleCode('')
+              setSelectedCabinetCode('')
               setActiveCategory('fixtures')
             }}
             className={`relative z-10 py-2.5 px-4 rounded-xl text-xs transition-colors duration-200 flex items-center justify-center gap-2 cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus:ring-0 border-0 ${
@@ -133,15 +147,12 @@ export const AssetManagementPage: React.FC = () => {
               }`}
             />
             <span>Bóng đèn</span>
-            <span
-              className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
-                activeCategory === 'fixtures'
-                  ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200/70 dark:border-amber-800 shadow-2xs'
-                  : 'bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-              }`}
-            >
-              {fixtures.length}
-            </span>
+            <TabCountBadge
+              count={fixtures.length}
+              isLoading={isLoadingAssets}
+              isActive={activeCategory === 'fixtures'}
+              colorScheme="amber"
+            />
           </button>
 
           {/* Tab 3: Tủ điện & Mạch nguồn (Feeder) */}
@@ -149,6 +160,7 @@ export const AssetManagementPage: React.FC = () => {
             type="button"
             onClick={() => {
               setSelectedFixtureCode('')
+              setSelectedPoleCode('')
               setActiveCategory('cabinets')
             }}
             className={`relative z-10 py-2.5 px-4 rounded-xl text-xs transition-colors duration-200 flex items-center justify-center gap-2 cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus:ring-0 border-0 ${
@@ -165,15 +177,12 @@ export const AssetManagementPage: React.FC = () => {
               }`}
             />
             <span>Tủ điện & Lộ nguồn</span>
-            <span
-              className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
-                activeCategory === 'cabinets' || (activeCategory as string) === 'feeders'
-                  ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200/70 dark:border-amber-800 shadow-2xs'
-                  : 'bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-              }`}
-            >
-              {cabinets.length}
-            </span>
+            <TabCountBadge
+              count={cabinets.length}
+              isLoading={isLoadingAssets}
+              isActive={activeCategory === 'cabinets' || (activeCategory as string) === 'feeders'}
+              colorScheme="purple"
+            />
           </button>
 
           {/* Tab 4: Tuyến đường chiếu sáng */}
@@ -181,6 +190,8 @@ export const AssetManagementPage: React.FC = () => {
             type="button"
             onClick={() => {
               setSelectedFixtureCode('')
+              setSelectedPoleCode('')
+              setSelectedCabinetCode('')
               setActiveCategory('segments')
             }}
             className={`relative z-10 py-2.5 px-4 rounded-xl text-xs transition-colors duration-200 flex items-center justify-center gap-2 cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus:ring-0 border-0 ${
@@ -197,15 +208,12 @@ export const AssetManagementPage: React.FC = () => {
               }`}
             />
             <span>Tuyến đường chiếu sáng</span>
-            <span
-              className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
-                activeCategory === 'segments'
-                  ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/70 dark:border-indigo-800 shadow-2xs'
-                  : 'bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-              }`}
-            >
-              {segments.length}
-            </span>
+            <TabCountBadge
+              count={segments.length}
+              isLoading={isLoadingAssets}
+              isActive={activeCategory === 'segments'}
+              colorScheme="indigo"
+            />
           </button>
         </div>
 
@@ -215,6 +223,9 @@ export const AssetManagementPage: React.FC = () => {
             poles={poles}
             cabinets={cabinets}
             segments={segments}
+            isLoading={isLoadingAssets}
+            activePoleCode={selectedPoleCode}
+            onClearActivePole={() => setSelectedPoleCode('')}
             onAddPole={handleAddPole}
             onAddPoles={handleAddPoles}
             onUpdatePole={handleUpdatePole}
@@ -223,6 +234,7 @@ export const AssetManagementPage: React.FC = () => {
               setActiveCategory('cabinets')
             }}
             onSelectFixture={handleSelectFixture}
+            onSelectCabinet={handleSelectCabinet}
           />
         )}
 
@@ -232,7 +244,9 @@ export const AssetManagementPage: React.FC = () => {
             fixtures={fixtures}
             poles={poles}
             activeFixtureCode={selectedFixtureCode}
+            isLoading={isLoadingAssets}
             onClearActiveFixture={() => setSelectedFixtureCode('')}
+            onSelectPole={handleSelectPole}
             onAddFixture={handleAddFixture}
             onUpdateFixture={handleUpdateFixture}
             onOpenImport={() => setIsImportModalOpen(true)}
@@ -244,6 +258,9 @@ export const AssetManagementPage: React.FC = () => {
           <CabinetsTab
             cabinets={cabinets}
             segments={segments}
+            isLoading={isLoadingAssets}
+            activeCabinetCode={selectedCabinetCode}
+            onClearActiveCabinet={() => setSelectedCabinetCode('')}
             onAddCabinet={handleAddCabinet}
             onAddCabinets={handleAddCabinets}
             onUpdateCabinet={handleUpdateCabinet}
@@ -255,6 +272,7 @@ export const AssetManagementPage: React.FC = () => {
         {activeCategory === 'segments' && (
           <SegmentsTab
             segments={segments}
+            isLoading={isLoadingAssets}
             onAddSegment={handleAddSegment}
             onUpdateSegment={handleUpdateSegment}
             onOpenImport={() => setIsImportModalOpen(true)}

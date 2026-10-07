@@ -1,20 +1,25 @@
 import React from 'react'
-import { Edit2, Archive, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Edit2, Archive, CheckCircle2, AlertCircle, Boxes } from 'lucide-react'
 import type { ManagedFixture } from '../../../../hooks/assets/useAssetData'
 import type { PoleListItem } from '../../../../types/assets/poles'
+import { FixtureTableSkeleton } from './FixtureTableSkeleton'
 
 interface FixtureTableProps {
   fixtures: ManagedFixture[]
   poles: PoleListItem[]
   flashingFixtureCode?: string
+  isLoading?: boolean
   onEditFixture: (fixture: ManagedFixture) => void
+  onSelectPole?: (poleCode: string) => void
 }
 
 export const FixtureTable: React.FC<FixtureTableProps> = ({
   fixtures,
   poles,
   flashingFixtureCode,
+  isLoading = false,
   onEditFixture,
+  onSelectPole,
 }) => {
   // Pre-build pole map by external_ref for metadata lookup
   const poleMap = React.useMemo(() => {
@@ -68,7 +73,9 @@ export const FixtureTable: React.FC<FixtureTableProps> = ({
         </thead>
 
         <tbody className="divide-y divide-slate-100 text-slate-700">
-          {fixtures.length === 0 ? (
+          {isLoading ? (
+            <FixtureTableSkeleton rowCount={8} />
+          ) : fixtures.length === 0 ? (
             <tr>
               <td colSpan={9} className="py-12 text-center text-slate-400">
                 <AlertCircle className="w-8 h-8 text-slate-300 mx-auto mb-2" />
@@ -98,13 +105,23 @@ export const FixtureTable: React.FC<FixtureTableProps> = ({
                   </td>
 
                   {/* Cột điện gắn bóng */}
-                  <td className="py-2.5 px-3.5 font-mono font-semibold text-blue-600">
+                  <td className="py-2.5 px-3.5">
                     {fixture.pole_external_ref ? (
-                      <span className="hover:underline cursor-pointer">
-                        {fixture.pole_external_ref}
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (onSelectPole && fixture.pole_external_ref) {
+                            onSelectPole(fixture.pole_external_ref)
+                          }
+                        }}
+                        className="cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/60 font-semibold shadow-2xs hover:border-blue-400 hover:bg-blue-100/80 active:scale-95 transition group"
+                        title={`Cột điện: ${fixture.pole_external_ref} — Bấm để chuyển sang tab Cột điện`}
+                      >
+                        <Boxes className="w-3.5 h-3.5 text-blue-500 shrink-0 group-hover:scale-110 transition" />
+                        <span className="font-bold font-mono text-xs">{fixture.pole_external_ref}</span>
+                      </button>
                     ) : (
-                      <span className="text-slate-400 font-normal italic">Chưa gán</span>
+                      <span className="text-slate-400 dark:text-slate-500 font-normal italic text-xs">Chưa gán</span>
                     )}
                   </td>
 

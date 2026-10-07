@@ -1,15 +1,20 @@
 import React from 'react'
 import { Eye, Edit2, Database } from 'lucide-react'
 import type { SegmentListItem } from '../../../../types/assets/segments'
+import { SegmentTableSkeleton } from './SegmentTableSkeleton'
+import { getCommuneName } from '../../../../constants/communes'
+import { getDataSourceDisplayName } from '../../../../constants/enums'
 
 export interface SegmentTableProps {
   segments: SegmentListItem[]
+  isLoading?: boolean
   onViewDetail: (segment: SegmentListItem) => void
   onEdit: (segment: SegmentListItem) => void
 }
 
 export const SegmentTable: React.FC<SegmentTableProps> = ({
   segments,
+  isLoading = false,
   onViewDetail,
   onEdit,
 }) => {
@@ -30,7 +35,9 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
-            {segments.length === 0 ? (
+            {isLoading ? (
+              <SegmentTableSkeleton rowCount={8} />
+            ) : segments.length === 0 ? (
               <tr>
                 <td colSpan={8} className="p-8 text-center text-slate-400 dark:text-slate-400 text-xs">
                   Không tìm thấy tuyến đường nào phù hợp với bộ lọc hiện tại.
@@ -69,12 +76,12 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
                     {seg.pole_count} cột
                   </td>
                   <td className="p-3.5 text-slate-600 dark:text-slate-300 font-medium">
-                    {seg.commune_id || 'Củ Chi'}
+                    {getCommuneName(seg.commune_id)}
                   </td>
                   <td className="p-3.5">
-                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                      <Database className="w-3.5 h-3.5 text-blue-500" />
-                      <span>{seg.data_source || 'Thực địa'}</span>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-sky-300 border border-blue-200/60 dark:border-blue-800/60 whitespace-nowrap">
+                      <Database className="w-3 h-3 text-blue-500 shrink-0" />
+                      <span>{getDataSourceDisplayName(seg.data_source)}</span>
                     </span>
                   </td>
                   <td className="p-3.5 text-right space-x-1.5 whitespace-nowrap">
