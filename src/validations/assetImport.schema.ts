@@ -4,6 +4,7 @@ import type { PoleListItem } from '../types/assets/poles'
 import type { FeederListItem } from '../types/assets/feeders'
 import type { SegmentListItem } from '../types/assets/segments'
 import type { ManagedFixture } from '../hooks/assets/useAssetData'
+import { formatCommuneDisplayName } from '../constants/communes'
 
 /**
  * Interface cho các trường thay đổi khi so khớp bản ghi
@@ -79,7 +80,13 @@ export const feederImportSchema = z.object({
   external_ref: z.string().min(1, 'Mã tủ điện/lộ nguồn (external_ref) không được để trống'),
   commune_id: z.string().min(1, 'Mã xã/phường (commune_id) không được để trống'),
   feeder_name: z.string().min(1, 'Tên tủ điện/lộ nguồn (feeder_name) không được để trống'),
-  geom_wkt: z.string().optional().nullable(),
+  geom_wkt: z
+    .string()
+    .refine((val) => !val || val.trim() === '' || /^LINESTRING\s*\(/i.test(val.trim()), {
+      message: 'Tọa độ lộ nguồn/tủ điện phải là định dạng LINESTRING WKT hợp lệ (Ví dụ: LINESTRING(lng1 lat1, lng2 lat2))',
+    })
+    .optional()
+    .nullable(),
 })
 export type FeederImportInput = z.infer<typeof feederImportSchema>
 
@@ -264,6 +271,13 @@ export function validateImportRow(
           newVal: `${data.length_m}m`,
         })
       }
+      if (data.commune_id && existing.commune_id !== data.commune_id) {
+        diffs.push({
+          label: 'Xã/phường',
+          oldVal: formatCommuneDisplayName(existing.commune_id),
+          newVal: formatCommuneDisplayName(data.commune_id),
+        })
+      }
 
       actionType = diffs.length > 0 ? 'updated' : 'unchanged'
     }
@@ -332,7 +346,7 @@ export function validateImportRow(
       diffs.push({
         label: 'Tủ điện mới',
         oldVal: 'Chưa có trên GIS',
-        newVal: `${data.feeder_name} (${data.commune_id})`,
+        newVal: `${data.feeder_name} (${formatCommuneDisplayName(data.commune_id)})`,
       })
     } else {
       if (existing.feeder_name !== data.feeder_name) {
@@ -342,11 +356,18 @@ export function validateImportRow(
           newVal: data.feeder_name,
         })
       }
-      if (existing.commune_id !== data.commune_id) {
+      if (data.commune_id && existing.commune_id !== data.commune_id) {
         diffs.push({
           label: 'Xã/phường',
-          oldVal: existing.commune_id || 'Chưa gán',
-          newVal: data.commune_id,
+          oldVal: formatCommuneDisplayName(existing.commune_id),
+          newVal: formatCommuneDisplayName(data.commune_id),
+        })
+      }
+      if (!existing.has_geometry && data.geom_wkt) {
+        diffs.push({
+          label: 'Tọa độ GIS',
+          oldVal: 'Chưa định vị',
+          newVal: `Định vị tọa độ (${lat.toFixed(5)}, ${lng.toFixed(5)})`,
         })
       }
 
@@ -472,6 +493,13 @@ export function validateImportRow(
           label: 'Nguồn điện',
           oldVal: existingFixture.power_source === 'grid' ? 'Lưới điện' : 'Năng lượng MT',
           newVal: data.power_source === 'grid' ? 'Lưới điện' : 'Năng lượng MT',
+        })
+      }
+      if (data.fixture_type && existingFixture.fixture_type !== data.fixture_type) {
+        diffs.push({
+          label: 'Loại bóng đèn',
+          oldVal: existingFixture.fixture_type || 'Chưa phân loại',
+          newVal: data.fixture_type,
         })
       }
 
@@ -616,6 +644,42 @@ export function validateImportRow(
       newVal: `Tạo mới (${watt}W, ${segName})`,
     })
   } else {
+    // 1. So sánh Tọa độ GIS
+    if (existingPole.location) {
+      const latDiff = Math.abs(existingPole.location.lat - lat)
+      const lngDiff = Math.abs(existingPole.location.lng - lng)
+      if (latDiff > 0.00001 || lngDiff > 0.00001) {
+        diffs.push({
+          label: 'Tọa độ GIS',
+          oldVal: `${existingPole.location.lat.toFixed(5)}, ${existingPole.location.lng.toFixed(5)}`,
+          newVal: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+        })
+      }
+    }
+
+    // 2. So sánh Tuyến đường quản lý
+    if (existingPole.segment_id && segObj.segment_id && existingPole.segment_id !== segObj.segment_id) {
+      const oldSeg = segments.find((s) => s.segment_id === existingPole.segment_id)
+      diffs.push({
+        label: 'Tuyến đường quản lý',
+        oldVal: oldSeg?.segment_name || existingPole.segment_id,
+        newVal: segObj.segment_name || data.segment_external_ref,
+      })
+    }
+
+    // 3. So sánh Tủ điện nguồn
+    const currentFeederId = existingPole.feeder_id || null
+    const newFeederId = cabObj?.feeder_id || null
+    if (data.feeder_external_ref && currentFeederId !== newFeederId) {
+      const oldCab = cabinets.find((c) => c.feeder_id === currentFeederId)
+      diffs.push({
+        label: 'Tủ điện nguồn',
+        oldVal: oldCab?.feeder_name || (currentFeederId ? `Tủ ${currentFeederId}` : 'Chưa gán tủ'),
+        newVal: cabObj?.feeder_name || `Tủ ${data.feeder_external_ref}`,
+      })
+    }
+
+    // 4. So sánh Công suất đèn
     if (data.lamp_watt && existingPole.active_fixture?.lamp_watt !== data.lamp_watt) {
       diffs.push({
         label: 'Công suất đèn',
@@ -623,6 +687,26 @@ export function validateImportRow(
         newVal: `${data.lamp_watt}W`,
       })
     }
+
+    // 5. So sánh Nguồn điện
+    if (data.power_source && existingPole.active_fixture?.power_source !== data.power_source) {
+      diffs.push({
+        label: 'Nguồn điện',
+        oldVal: existingPole.active_fixture?.power_source === 'grid' ? 'Lưới điện' : 'Năng lượng MT',
+        newVal: data.power_source === 'grid' ? 'Lưới điện' : 'Năng lượng MT',
+      })
+    }
+
+    // 6. So sánh Loại bóng đèn
+    if (data.fixture_type && existingPole.active_fixture?.fixture_type !== data.fixture_type) {
+      diffs.push({
+        label: 'Loại bóng đèn',
+        oldVal: existingPole.active_fixture?.fixture_type || 'Chưa phân loại',
+        newVal: data.fixture_type,
+      })
+    }
+
+    // 7. So sánh Hạn bảo hành
     if (data.warranty_expiry && existingPole.active_fixture?.warranty_expiry !== data.warranty_expiry) {
       diffs.push({
         label: 'Hạn bảo hành',
@@ -630,6 +714,8 @@ export function validateImportRow(
         newVal: data.warranty_expiry,
       })
     }
+
+    // 8. So sánh Khu vực nhạy cảm (POI)
     if (data.near_sensitive_poi !== undefined && existingPole.near_sensitive_poi !== data.near_sensitive_poi) {
       diffs.push({
         label: 'Khu vực nhạy cảm (POI)',
@@ -637,6 +723,8 @@ export function validateImportRow(
         newVal: data.near_sensitive_poi ? 'Gần khu nhạy cảm' : 'Bình thường',
       })
     }
+
+    // 9. So sánh Ghi chú hiện trường
     const incomingNote = data.note !== undefined ? data.note?.trim() || null : null
     const currentNote = existingPole.note?.trim() || null
     if (incomingNote !== null && incomingNote !== currentNote) {
