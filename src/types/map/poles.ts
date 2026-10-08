@@ -56,7 +56,7 @@ export interface PoleMapHistoryPoint {
     baseline_ratio?: number
     classified_as?: FixtureStatus
     peak_lux?: number
-    reason_codes: string | null[]
+    reason_codes: string[]
 }
 
 export interface PoleMapIotNode {

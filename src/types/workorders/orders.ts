@@ -2,7 +2,29 @@
  * Auto-generated Types for: workorders/orders
  * Sinh tự động từ endpoint Backend
  */
-import type { EvidenceKind, FaultStatus, FaultType, FixtureStatus, FixtureType, InspectionOutcome, Severity, TaskKind, WorkOrderStatus } from '../common/enums'
+import type { AgendaFlag, EvidenceKind, FaultStatus, FaultType, FixtureStatus, FixtureType, InspectionOutcome, Severity, TaskKind, WorkOrderStatus } from '../common/enums'
+
+export interface AgendaWorkOrder {
+    work_order_id: string | null
+    title: string | null
+    commune_id: string | null
+    task_kind?: TaskKind
+    segment_id?: string | null
+    cluster_id?: string | null
+    parent_work_order_id?: string | null
+    case_id: string | null
+    fault_ids: string[]
+    wo_status?: WorkOrderStatus
+    assigned_to?: string | null
+    priority_score?: number
+    created_at?: string | null
+    updated_at?: string | null
+    due_date?: string | null
+    scheduled_date?: string | null
+    segment_ids?: string[]
+    flags?: AgendaFlag[]
+    location?: WorkOrderLocation
+}
 
 export interface AssignWorkOrderRequest {
     assigned_to: string | null
@@ -12,14 +34,15 @@ export interface CompleteWorkOrderRequest {
     report_note: string | null
     materials_used?: string | null
     fault_outcomes?: FaultOutcomeRequest[]
+    performed_at?: string | null
 }
 
 export interface CreateWorkOrderRequest {
     task_kind: TaskKind
     title: string | null
-    fault_ids?: string | null[]
+    fault_ids?: string[]
     segment_id?: string | null
-    segment_ids?: string | null[]
+    segment_ids?: string[]
     assigned_to?: string | null
     due_date?: string | null
     scheduled_date?: string | null
@@ -57,7 +80,7 @@ export interface FaultOutcomeRequest {
 export interface FollowUpWorkOrderRequest {
     task_kind: TaskKind
     title?: string | null
-    fault_ids?: string | null[]
+    fault_ids?: string[]
     assigned_to?: string | null
     due_date?: string | null
     scheduled_date?: string | null
@@ -74,6 +97,26 @@ export interface PatchWorkOrderRequest {
 
 export interface ReviewWorkOrderRequest {
     note?: string | null
+}
+
+export interface StartWorkOrderRequest {
+    performed_at?: string | null
+}
+
+export interface WorkOrderAgenda {
+    night_of?: string | null
+    assigned_to: string | null
+    upcoming_count?: number
+    groups: WorkOrderAgendaGroup[]
+}
+
+export interface WorkOrderAgendaGroup {
+    segment_id?: string | null
+    segment_name?: string | null
+    commune_id: string | null
+    location?: WorkOrderLocation
+    distance_m?: number
+    work_orders: AgendaWorkOrder[]
 }
 
 export interface WorkOrderAssignee {
@@ -97,7 +140,7 @@ export interface WorkOrderDetail {
     cluster_id?: string | null
     parent_work_order_id?: string | null
     case_id: string | null
-    fault_ids: string | null[]
+    fault_ids: string[]
     wo_status?: WorkOrderStatus
     assigned_to?: string | null
     priority_score?: number
@@ -105,7 +148,7 @@ export interface WorkOrderDetail {
     updated_at?: string | null
     due_date?: string | null
     scheduled_date?: string | null
-    segment_ids?: string | null[]
+    segment_ids?: string[]
     note?: string | null
     review_note?: string | null
     report_note?: string | null
@@ -117,7 +160,7 @@ export interface WorkOrderDetail {
     completed_at?: string | null
     closed_at?: string | null
     assignee_eligible?: boolean
-    allowed_actions: string | null[]
+    allowed_actions: string[]
     faults: WorkOrderFaultDetail[]
 }
 
@@ -141,7 +184,7 @@ export interface WorkOrderItem {
     cluster_id?: string | null
     parent_work_order_id?: string | null
     case_id: string | null
-    fault_ids: string | null[]
+    fault_ids: string[]
     wo_status?: WorkOrderStatus
     assigned_to?: string | null
     priority_score?: number
@@ -175,7 +218,7 @@ export interface WorkOrderPole {
     near_sensitive_poi?: boolean
     fixture_type?: FixtureType
     lamp_watt?: number
-    work_order_fault_ids: string | null[]
+    work_order_fault_ids: string[]
     note?: string | null
 }
 

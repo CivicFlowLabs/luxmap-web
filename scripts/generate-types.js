@@ -64,8 +64,11 @@ function openApiTypeToTs(prop) {
     }
 
     if (prop.type === 'array') {
-        const itemType = openApiTypeToTs(prop.items)
-        return `${itemType}[]`
+        let itemType = openApiTypeToTs(prop.items)
+        if (itemType === 'string | null') {
+            itemType = 'string'
+        }
+        return itemType.includes('|') ? `(${itemType})[]` : `${itemType}[]`
     }
 
     if (prop.type === 'string') {

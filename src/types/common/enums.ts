@@ -3,6 +3,8 @@
  * Tự động sinh từ Backend Swagger
  */
 
+export type AgendaFlag = 'in_progress' | 'scheduled_tonight' | 'carried_over' | 'unscheduled' | 'overdue'
+
 export type DataSource = 'field' | 'public_imagery' | 'calibration_rig' | 'simulated'
 
 export type EvidenceKind = 'before' | 'after' | 'observation'
@@ -11,11 +13,21 @@ export type FaultStatus = 'detected' | 'confirmed' | 'rejected' | 'in_progress' 
 
 export type FaultType = 'lamp_out' | 'lamp_dim' | 'segment_outage' | 'node_offline' | 'runtime_decline'
 
+export type FeederControlMode = 'on' | 'off' | 'auto'
+
 export type FixtureStatus = 'normal' | 'dim' | 'out' | 'unknown'
 
 export type FixtureType = 'led_road_lamp'
 
 export type InspectionOutcome = 'fault_present' | 'fault_absent' | 'inconclusive'
+
+export type LightingAckResult = 'applied' | 'failed'
+
+export type LightingCommandStatus = 'pending' | 'delivered' | 'applied' | 'failed' | 'expired' | 'superseded'
+
+export type LightingExclusionReason = 'not_wired' | 'remote_control_unsupported' | 'no_credential'
+
+export type LightingTargetKind = 'feeder' | 'segment'
 
 export type NodeRole = 'segment_controller'
 
@@ -40,6 +52,8 @@ export type SweepProcessingStatus = 'not_started' | 'queued' | 'processing' | 's
 export type SweepStatus = 'uploading' | 'queued' | 'processing' | 'awaiting_review' | 'accepted' | 'returned' | 'failed'
 
 export type TaskKind = 'inspection' | 'repair' | 'survey'
+
+export type TopologySource = 'verified' | 'inferred'
 
 export type UserRole = 'superior' | 'manager' | 'field_engineer' | 'system_admin'
 

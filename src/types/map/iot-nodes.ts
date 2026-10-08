@@ -10,8 +10,8 @@ export interface IotNodeProperties {
     node_role: NodeRole
     node_status: NodeStatus
     pole_id?: string | null
-    segment_ids: string | null[]
-    feeder_ids: string | null[]
+    segment_ids: string[]
+    feeder_ids: string[]
     supports_remote_control: boolean
     last_report_at?: string | null
 }
