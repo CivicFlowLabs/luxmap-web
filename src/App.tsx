@@ -1,9 +1,11 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { Toaster } from 'sonner'
 import { checkAuth } from './feature/auth/authSlice'
 import { UserRole } from './types/auth/web'
+import type { RootState } from './redux/rootReducer'
+import { isSystemAdmin } from './utils/roleUtils'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { LoginPage } from './pages/login/LoginPage'
 import { DefaultLayout } from './layout/DefaultLayout'
@@ -13,6 +15,19 @@ import { AssetManagementPage } from './pages/assets/AssetManagementPage'
 import { ForbiddenPage } from './pages/forbidden/ForbiddenPage'
 import { AdminManagementPage } from './pages/admin/AdminManagementPage'
 import { NotFoundPage } from './pages/not-found/NotFoundPage'
+
+/**
+ * Điều hướng trang gốc / dựa theo vai trò người dùng (RBAC)
+ * - Admin: chuyển sang /admin/system
+ * - Manager: chuyển sang /gis-map
+ */
+const RootRedirect: React.FC = () => {
+  const { user } = useSelector((state: RootState) => state.auth)
+  if (isSystemAdmin(user?.role)) {
+    return <Navigate to="/admin/system" replace />
+  }
+  return <Navigate to="/gis-map" replace />
+}
 
 function App() {
   const dispatch = useDispatch()
@@ -42,20 +57,42 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route path="/" element={<Navigate to="/gis-map" replace />} />
-          
-          {/* Tuyến bản đồ GIS chung cho cả 4 vai trò đã đăng nhập */}
-          <Route path="/gis-map" element={<GisMapPage />} />
+          {/* Điều hướng thông minh theo vai trò */}
+          <Route path="/" element={<RootRedirect />} />
 
-          {/* Tuyến Quản lý Lịch làm việc & các đường dẫn tương đương */}
-          <Route path="/work-schedule" element={<WorkSchedulePage />} />
+          {/* Tuyến bản đồ GIS: Dành cho Cán bộ Quản lý (Manager) */}
+          <Route
+            path="/gis-map"
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.MaintenanceEngineer]}>
+                <GisMapPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Tuyến Quản lý Lịch làm việc: Dành cho Cán bộ Quản lý (Manager) */}
+          <Route
+            path="/work-schedule"
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.MaintenanceEngineer]}>
+                <WorkSchedulePage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/work%20schedule" element={<Navigate to="/work-schedule" replace />} />
           <Route path="/work schedule" element={<Navigate to="/work-schedule" replace />} />
           <Route path="/work_schedule" element={<Navigate to="/work-schedule" replace />} />
           <Route path="/schedule" element={<Navigate to="/work-schedule" replace />} />
 
-          {/* Tuyến Quản lý tài sản */}
-          <Route path="/assets" element={<AssetManagementPage />} />
+          {/* Tuyến Quản lý tài sản: Dành cho Cán bộ Quản lý (Manager) */}
+          <Route
+            path="/assets"
+            element={
+              <ProtectedRoute allowedRoles={[UserRole.MaintenanceEngineer]}>
+                <AssetManagementPage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Tuyến đường Quản trị: CHỈ CHO PHÉP Quản trị viên (Admin) */}
           <Route

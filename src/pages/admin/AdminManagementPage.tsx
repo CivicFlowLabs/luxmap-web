@@ -1,169 +1,175 @@
-import React from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useEffect, useState, useMemo } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
+import type { RootState } from '../../redux/rootReducer'
+import type {
+  UserAccountItem,
+  CreateUserRequest,
+  UpdateUserRequest,
+} from '../../types/admin/users'
 import {
-  ShieldCheck,
-  Users,
-  MapPin,
-  ArrowLeft,
-  Server,
-  KeyRound,
-  CheckCircle2,
-} from 'lucide-react'
+  fetchUsersRequest,
+  createUserRequest,
+  updateUserRequest,
+  lockUserRequest,
+  unlockUserRequest,
+  inviteUserRequest,
+  setFilters,
+  setPage,
+} from '../../feature/admin/adminUserSlice'
+import { UserTable } from './components/UserTable'
+import { UserFilterToolbar } from './components/UserFilterToolbar'
+import { CreateUserModal } from './components/CreateUserModal'
+import { EditUserModal } from './components/EditUserModal'
+import { LockUserDialog } from './components/LockUserDialog'
+import { TablePagination } from '../assets/components/common/TablePagination'
 
 export const AdminManagementPage: React.FC = () => {
-  const navigate = useNavigate()
+  const dispatch = useDispatch()
 
-  const systemUsers = [
-    {
-      id: 'USR-001',
-      username: 'admin',
-      fullName: 'System Administrator',
-      role: 'Quản trị viên (Administrator)',
-      scope: 'Toàn hệ thống (*)',
-      status: 'Đang hoạt động',
-      badgeColor: 'bg-indigo-100 text-indigo-700 border-indigo-200',
-    },
-    {
-      id: 'USR-002',
-      username: 'agency',
-      fullName: 'Managing Authority Officer',
-      role: 'Cơ quan Quản lý (Management Agency)',
-      scope: 'Liên xã / Đơn vị quản lý',
-      status: 'Đang hoạt động',
-      badgeColor: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-    },
-    {
-      id: 'USR-003',
-      username: 'engineer',
-      fullName: 'Maintenance Engineer',
-      role: 'Kỹ sư Bảo trì (Maintenance Engineer)',
-      scope: 'Xã được phân công',
-      status: 'Đang hoạt động',
-      badgeColor: 'bg-amber-100 text-amber-700 border-amber-200',
-    },
-    {
-      id: 'USR-004',
-      username: 'crew',
-      fullName: 'Survey and Repair Crew',
-      role: 'Đội Khảo sát & Sửa chữa (Field Crew)',
-      scope: 'Hiện trường tuyến cột',
-      status: 'Đang hoạt động',
-      badgeColor: 'bg-blue-100 text-blue-700 border-blue-200',
-    },
-  ]
+  const currentUser = useSelector((state: RootState) => state.auth.user)
+  const {
+    users,
+    total,
+    page,
+    pageSize,
+    isLoading,
+    isSubmitting,
+    filters,
+  } = useSelector((state: RootState) => state.adminUsers)
+
+  // Local state for modals
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [editingUser, setEditingUser] = useState<UserAccountItem | null>(null)
+  const [lockingUser, setLockingUser] = useState<UserAccountItem | null>(null)
+
+  // Tải danh sách người dùng khi mount hoặc khi filter thay đổi
+  useEffect(() => {
+    dispatch(
+      fetchUsersRequest({
+        role: filters.role || undefined,
+        status: filters.status || undefined,
+        page,
+        page_size: pageSize,
+      })
+    )
+  }, [dispatch, filters.role, filters.status, page, pageSize])
+
+  // Lọc bỏ tài khoản đang đăng nhập (chính mình) và lọc theo từ khóa tìm kiếm (họ tên, username, email)
+  const filteredUsers = useMemo(() => {
+    // 1. Loại bỏ tài khoản của chính mình khỏi bảng quản lý
+    const otherUsers = users.filter((u) => {
+      if (!currentUser) return true
+      const matchId =
+        (currentUser.userId && u.user_id === currentUser.userId) ||
+        (currentUser.id && u.user_id === currentUser.id)
+      const matchUsername =
+        currentUser.username &&
+        u.username?.toLowerCase() === currentUser.username.toLowerCase()
+      const matchEmail =
+        currentUser.email &&
+        u.email?.toLowerCase() === currentUser.email.toLowerCase()
+
+      const isSelf = Boolean(matchId || matchUsername || matchEmail)
+      return !isSelf
+    })
+
+    // 2. Lọc theo ô tìm kiếm
+    if (!filters.search.trim()) return otherUsers
+    const query = filters.search.toLowerCase().trim()
+    return otherUsers.filter((u) => {
+      const matchName = (u.full_name || '').toLowerCase().includes(query)
+      const matchUser = (u.username || '').toLowerCase().includes(query)
+      const matchEmail = (u.email || '').toLowerCase().includes(query)
+      return matchName || matchUser || matchEmail
+    })
+  }, [users, filters.search, currentUser])
+
+  const handleCreateSubmit = (payload: CreateUserRequest) => {
+    dispatch(createUserRequest(payload))
+    setIsCreateModalOpen(false)
+  }
+
+  const handleEditSubmit = (id: string, payload: UpdateUserRequest) => {
+    dispatch(updateUserRequest({ id, data: payload }))
+    setEditingUser(null)
+  }
+
+  const handleConfirmToggleLock = () => {
+    if (!lockingUser?.user_id) return
+    if (lockingUser.status === 'locked') {
+      dispatch(unlockUserRequest(lockingUser.user_id))
+    } else {
+      dispatch(lockUserRequest(lockingUser.user_id))
+    }
+    setLockingUser(null)
+  }
+
+  const handleInvite = (user: UserAccountItem) => {
+    if (user.user_id) {
+      dispatch(inviteUserRequest(user.user_id))
+    }
+  }
+
+  const totalPages = Math.ceil(total / pageSize) || 1
 
   return (
-    <div className="h-full w-full bg-slate-50 overflow-y-auto p-6 md:p-10 font-sans text-slate-800">
-      <div className="max-w-6xl mx-auto space-y-6">
-        {/* Top Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 font-bold text-xs border border-indigo-200 flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                ADMIN ONLY
-              </span>
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-                Phân Hệ Quản Trị Hệ Thống
-              </h1>
-            </div>
-            <p className="text-xs text-slate-500 mt-1">
-              Quản lý tài khoản, phân quyền tác nghiệp và kiểm soát phạm vi địa bàn hành chính (BE-08 / Contract mục 7).
-            </p>
-          </div>
+    <div className="h-full w-full bg-slate-50 dark:bg-slate-950 overflow-y-auto p-4 sm:p-6 md:p-8 font-sans text-slate-800 dark:text-slate-200">
+      <div className="max-w-7xl mx-auto space-y-3.5">
+        {/* Toolbar & Filter with Add User on the far right */}
+        <UserFilterToolbar
+          searchTerm={filters.search}
+          selectedRole={filters.role}
+          selectedStatus={filters.status}
+          onSearchChange={(search) => dispatch(setFilters({ search }))}
+          onRoleChange={(role) => dispatch(setFilters({ role }))}
+          onStatusChange={(status) => dispatch(setFilters({ status }))}
+          onOpenCreateModal={() => setIsCreateModalOpen(true)}
+        />
 
-          <button
-            onClick={() => navigate('/gis-map')}
-            className="px-4 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-700 font-bold text-xs border border-slate-200 shadow-2xs transition-all flex items-center gap-2 shrink-0 cursor-pointer"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Về Bản đồ GIS</span>
-          </button>
-        </div>
+        {/* User Table */}
+        <UserTable
+          users={filteredUsers}
+          isLoading={isLoading}
+          onEdit={(user) => setEditingUser(user)}
+          onToggleLock={(user) => setLockingUser(user)}
+          onInvite={handleInvite}
+        />
 
-        {/* System Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Tài khoản Tác nghiệp</p>
-              <p className="text-xl font-black text-slate-900">4 Vai trò RBAC</p>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-              <MapPin className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Phạm vi Quản trị</p>
-              <p className="text-xl font-black text-slate-900">Toàn quyền (*)</p>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-              <Server className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Trạng thái Xác thực</p>
-              <p className="text-xl font-black text-emerald-600 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4" />
-                Cookie Secure Active
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* User Roles Table */}
-        <div className="rounded-2xl bg-white border border-slate-200 shadow-2xs overflow-hidden">
-          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-              <KeyRound className="w-4 h-4 text-slate-500" />
-              Danh Sách Tài Khoản & Quyền Hạn Đã Khởi Tạo
-            </h2>
-            <span className="text-[11px] text-slate-400">Database Seeded Data</span>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
-                <tr>
-                  <th className="p-3.5">Mã ID</th>
-                  <th className="p-3.5">Tài khoản</th>
-                  <th className="p-3.5">Tên hiển thị</th>
-                  <th className="p-3.5">Vai trò (RBAC)</th>
-                  <th className="p-3.5">Phạm vi địa bàn (Claim)</th>
-                  <th className="p-3.5 text-center">Trạng thái</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {systemUsers.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="p-3.5 font-mono font-bold text-slate-700">{u.id}</td>
-                    <td className="p-3.5 font-bold text-slate-900">{u.username}</td>
-                    <td className="p-3.5 text-slate-600">{u.fullName}</td>
-                    <td className="p-3.5">
-                      <span className={`px-2 py-0.5 rounded-md font-semibold text-[11px] border ${u.badgeColor}`}>
-                        {u.role}
-                      </span>
-                    </td>
-                    <td className="p-3.5 font-mono text-slate-600">{u.scope}</td>
-                    <td className="p-3.5 text-center">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        {u.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        {/* Pagination */}
+        <TablePagination
+          currentListLength={filteredUsers.length}
+          currentPage={page}
+          pageSize={pageSize}
+          totalPages={totalPages}
+          unitLabel="tài khoản"
+          isLoading={isLoading}
+          onPageChange={(newPage) => dispatch(setPage(newPage))}
+        />
       </div>
+
+      {/* Modals */}
+      <CreateUserModal
+        isOpen={isCreateModalOpen}
+        isSubmitting={isSubmitting}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleCreateSubmit}
+      />
+
+      <EditUserModal
+        isOpen={Boolean(editingUser)}
+        user={editingUser}
+        isSubmitting={isSubmitting}
+        onClose={() => setEditingUser(null)}
+        onSubmit={handleEditSubmit}
+      />
+
+      <LockUserDialog
+        isOpen={Boolean(lockingUser)}
+        user={lockingUser}
+        isSubmitting={isSubmitting}
+        onClose={() => setLockingUser(null)}
+        onConfirm={handleConfirmToggleLock}
+      />
     </div>
   )
 }

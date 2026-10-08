@@ -2,7 +2,7 @@
  * Auto-generated Types for: assets/poles
  * Sinh tự động từ endpoint Backend
  */
-import type { DataSource } from '../common/enums'
+import type { DataSource, TopologySource } from '../common/enums'
 import type { AssetLocation } from '../common/base'
 import type { ActiveFixture } from './fixtures'
 
@@ -15,6 +15,7 @@ export interface CreatePoleRequest {
     near_sensitive_poi?: boolean
     data_source: DataSource
     note?: string | null
+    feeder_source?: string | null
 }
 
 export interface PoleDetail {
@@ -29,6 +30,7 @@ export interface PoleListItem {
     external_ref?: string | null
     segment_id: string | null
     feeder_id?: string | null
+    feeder_source?: TopologySource
     commune_id: string | null
     data_source: DataSource
     near_sensitive_poi: boolean
@@ -57,6 +59,7 @@ export interface PoleNoteResponse {
 
 export interface SetPoleFeederRequest {
     feeder_id?: string | null
+    feeder_source?: string | null
 }
 
 export interface SetPoleNoteRequest {
@@ -71,5 +74,6 @@ export interface UpdatePoleRequest {
     near_sensitive_poi?: boolean
     data_source: DataSource
     note?: string | null
+    feeder_source?: string | null
 }
 

@@ -246,6 +246,14 @@ export const isAdmin = (role?: UserRole | string | number): boolean => {
   return normalizeRole(role) === UserRole.Admin
 }
 
+export const isSystemAdmin = (role?: UserRole | string | number): boolean => {
+  return isAdmin(role)
+}
+
+export const isManager = (role?: UserRole | string | number): boolean => {
+  return normalizeRole(role) === UserRole.MaintenanceEngineer
+}
+
 export const isManagementAgency = (role?: UserRole | string | number): boolean => {
   return normalizeRole(role) === UserRole.ManagementAgency
 }
@@ -256,4 +264,23 @@ export const isMaintenanceEngineer = (role?: UserRole | string | number): boolea
 
 export const isFieldCrew = (role?: UserRole | string | number): boolean => {
   return normalizeRole(role) === UserRole.FieldCrew
+}
+
+/**
+ * Kiểm tra quyền hiển thị và truy cập tab trên Sidebar / Navigation Bar
+ * - system_admin: Chỉ truy cập 'admin-system'
+ * - manager: Truy cập 'gis-map', 'work-schedule', 'assets'
+ * - các vai trò khác: Tạm thời chưa có tab
+ */
+export const canAccessTab = (
+  tabId: 'gis-map' | 'work-schedule' | 'assets' | 'admin-system',
+  role?: UserRole | string | number
+): boolean => {
+  if (isSystemAdmin(role)) {
+    return tabId === 'admin-system'
+  }
+  if (isManager(role)) {
+    return tabId === 'gis-map' || tabId === 'work-schedule' || tabId === 'assets'
+  }
+  return false
 }

@@ -8,6 +8,6 @@ export interface CurrentUserResponse {
     email?: string | null
     full_name?: string | null
     role?: string | null
-    commune_ids?: string | null[]
+    commune_ids?: string[]
 }
 

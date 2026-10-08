@@ -73,8 +73,8 @@ export interface SurveyResultItem {
     baseline_ratio?: number
     classified_as?: FixtureStatus
     dim_evaluation_eligible?: boolean
-    reason_codes?: string | null[]
-    quality_flags?: string | null[]
+    reason_codes?: string[]
+    quality_flags?: string[]
     frame_id?: string | null
     association_confidence?: number
     published_as?: FixtureStatus
@@ -100,7 +100,7 @@ export interface SweepResponse {
     work_order_id?: string | null
     started_at?: string | null
     ended_at?: string | null
-    segment_ids?: string | null[]
+    segment_ids?: string[]
     frame_count?: number
     coverage_pct?: number
     processing_status?: SweepProcessingStatus

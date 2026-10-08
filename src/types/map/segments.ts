@@ -11,7 +11,7 @@ export interface SegmentProperties {
     road_class: RoadClass
     length_m: number
     pole_count: number
-    controller_node_ids: string | null[]
+    controller_node_ids: string[]
     has_active_segment_fault: boolean
 }
 

@@ -9,7 +9,7 @@ export interface CreateUserRequest {
     email: string | null
     full_name: string | null
     role: UserRole
-    commune_ids?: string | null[]
+    commune_ids?: string[]
 }
 
 export interface CreateUserResponse {
@@ -26,7 +26,7 @@ export interface UpdateUserRequest {
     email?: string | null
     full_name?: string | null
     role?: UserRole
-    commune_ids?: string | null[]
+    commune_ids?: string[]
 }
 
 export interface UserAccountItem {
@@ -35,7 +35,7 @@ export interface UserAccountItem {
     email?: string | null
     full_name?: string | null
     role?: string | null
-    commune_ids?: string | null[]
+    commune_ids?: string[]
     status?: string | null
     created_at?: string | null
     password_set_at?: string | null

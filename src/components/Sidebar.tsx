@@ -9,7 +9,8 @@ import {
   ChevronRight,
   CalendarDays,
 } from 'lucide-react'
-import { User, UserRole } from '../types/auth/web'
+import { User } from '../types/auth/web'
+import { canAccessTab } from '../utils/roleUtils'
 
 export interface SidebarProps {
   brandTitle?: string
@@ -36,8 +37,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const isAssets = location.pathname.startsWith('/assets')
   const isAdminPath = location.pathname.startsWith('/admin')
 
-  const effectiveAdmin =
-    isAdminUser !== undefined ? isAdminUser : user?.role === UserRole.Admin
+  // Phân quyền hiển thị từng tab theo vai trò người dùng (RBAC)
+  const userRole = user?.role
+  const showGisMap = canAccessTab('gis-map', userRole)
+  const showWorkSchedule = canAccessTab('work-schedule', userRole)
+  const showAssets = canAccessTab('assets', userRole)
+  const showAdmin = isAdminUser !== undefined ? isAdminUser : canAccessTab('admin-system', userRole)
 
   return (
     <aside
@@ -70,83 +75,89 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* 2. Navigation Tab List */}
       <nav className="flex-1 py-4 px-3 space-y-1.5 overflow-y-auto custom-scrollbar">
-        {/* Tab 1: GIS Map */}
-        <NavLink
-          to="/gis-map"
-          title="Bản đồ chiếu sáng"
-          className={`flex items-center rounded-xl text-xs font-semibold transition-all duration-200 group active:scale-[0.98] ${
-            isCollapsed ? 'justify-center w-11 h-11 mx-auto' : 'px-3.5 py-2.5 gap-3 w-full'
-          } ${
-            isGisMap
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/90'
-          }`}
-        >
-          <Map
-            className={`w-4.5 h-4.5 shrink-0 transition-transform duration-200 ${
-              isGisMap ? 'scale-110 text-white' : 'text-slate-400 group-hover:text-slate-700'
+        {/* Tab 1: GIS Map (Dành cho Manager) */}
+        {showGisMap && (
+          <NavLink
+            to="/gis-map"
+            title="Bản đồ chiếu sáng"
+            className={`flex items-center rounded-xl text-xs font-semibold transition-all duration-200 group active:scale-[0.98] ${
+              isCollapsed ? 'justify-center w-11 h-11 mx-auto' : 'px-3.5 py-2.5 gap-3 w-full'
+            } ${
+              isGisMap
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/90'
             }`}
-          />
-          {!isCollapsed && (
-            <span className="flex-1 tracking-tight whitespace-nowrap">Bản đồ chiếu sáng</span>
-          )}
-          {!isCollapsed && isGisMap && (
-            <span className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)] animate-pulse ml-2" />
-          )}
-        </NavLink>
+          >
+            <Map
+              className={`w-4.5 h-4.5 shrink-0 transition-transform duration-200 ${
+                isGisMap ? 'scale-110 text-white' : 'text-slate-400 group-hover:text-slate-700'
+              }`}
+            />
+            {!isCollapsed && (
+              <span className="flex-1 tracking-tight whitespace-nowrap">Bản đồ chiếu sáng</span>
+            )}
+            {!isCollapsed && isGisMap && (
+              <span className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)] animate-pulse ml-2" />
+            )}
+          </NavLink>
+        )}
 
-        {/* Tab 2: Lịch làm việc */}
-        <NavLink
-          to="/work-schedule"
-          title="Lịch làm việc"
-          className={`flex items-center rounded-xl text-xs font-semibold transition-all duration-200 group active:scale-[0.98] ${
-            isCollapsed ? 'justify-center w-11 h-11 mx-auto' : 'px-3.5 py-2.5 gap-3 w-full'
-          } ${
-            isWorkSchedule
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/90'
-          }`}
-        >
-          <CalendarDays
-            className={`w-4.5 h-4.5 shrink-0 transition-transform duration-200 ${
-              isWorkSchedule ? 'scale-110 text-white' : 'text-slate-400 group-hover:text-slate-700'
+        {/* Tab 2: Lịch làm việc (Dành cho Manager) */}
+        {showWorkSchedule && (
+          <NavLink
+            to="/work-schedule"
+            title="Lịch làm việc"
+            className={`flex items-center rounded-xl text-xs font-semibold transition-all duration-200 group active:scale-[0.98] ${
+              isCollapsed ? 'justify-center w-11 h-11 mx-auto' : 'px-3.5 py-2.5 gap-3 w-full'
+            } ${
+              isWorkSchedule
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/90'
             }`}
-          />
-          {!isCollapsed && (
-            <span className="flex-1 tracking-tight whitespace-nowrap">Lịch làm việc</span>
-          )}
-          {!isCollapsed && isWorkSchedule && (
-            <span className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)] animate-pulse ml-2" />
-          )}
-        </NavLink>
+          >
+            <CalendarDays
+              className={`w-4.5 h-4.5 shrink-0 transition-transform duration-200 ${
+                isWorkSchedule ? 'scale-110 text-white' : 'text-slate-400 group-hover:text-slate-700'
+              }`}
+            />
+            {!isCollapsed && (
+              <span className="flex-1 tracking-tight whitespace-nowrap">Lịch làm việc</span>
+            )}
+            {!isCollapsed && isWorkSchedule && (
+              <span className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)] animate-pulse ml-2" />
+            )}
+          </NavLink>
+        )}
 
-        {/* Tab 3: Asset Management */}
-        <NavLink
-          to="/assets"
-          title="Quản lý tài sản"
-          className={`flex items-center rounded-xl text-xs font-semibold transition-all duration-200 group active:scale-[0.98] ${
-            isCollapsed ? 'justify-center w-11 h-11 mx-auto' : 'px-3.5 py-2.5 gap-3 w-full'
-          } ${
-            isAssets
-              ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/90'
-          }`}
-        >
-          <Boxes
-            className={`w-4.5 h-4.5 shrink-0 transition-transform duration-200 ${
-              isAssets ? 'scale-110 text-white' : 'text-slate-400 group-hover:text-slate-700'
+        {/* Tab 3: Quản lý tài sản (Dành cho Manager) */}
+        {showAssets && (
+          <NavLink
+            to="/assets"
+            title="Quản lý tài sản"
+            className={`flex items-center rounded-xl text-xs font-semibold transition-all duration-200 group active:scale-[0.98] ${
+              isCollapsed ? 'justify-center w-11 h-11 mx-auto' : 'px-3.5 py-2.5 gap-3 w-full'
+            } ${
+              isAssets
+                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/90'
             }`}
-          />
-          {!isCollapsed && (
-            <span className="flex-1 tracking-tight whitespace-nowrap">Quản lý tài sản</span>
-          )}
-          {!isCollapsed && isAssets && (
-            <span className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)] animate-pulse ml-2" />
-          )}
-        </NavLink>
+          >
+            <Boxes
+              className={`w-4.5 h-4.5 shrink-0 transition-transform duration-200 ${
+                isAssets ? 'scale-110 text-white' : 'text-slate-400 group-hover:text-slate-700'
+              }`}
+            />
+            {!isCollapsed && (
+              <span className="flex-1 tracking-tight whitespace-nowrap">Quản lý tài sản</span>
+            )}
+            {!isCollapsed && isAssets && (
+              <span className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)] animate-pulse ml-2" />
+            )}
+          </NavLink>
+        )}
 
-        {/* Tab 3: Admin Management (Chỉ dành cho Admin) */}
-        {effectiveAdmin && (
+        {/* Tab 4: Quản trị hệ thống (Chỉ dành cho Admin) */}
+        {showAdmin && (
           <NavLink
             to="/admin/system"
             title="Quản trị hệ thống"

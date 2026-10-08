@@ -2,7 +2,7 @@
  * Auto-generated Types for: assets/segments
  * Sinh tự động từ endpoint Backend
  */
-import type { DataSource, RoadClass } from '../common/enums'
+import type { DataSource, RoadClass, TopologySource } from '../common/enums'
 
 export interface CreateSegmentRequest {
     external_ref?: string | null
@@ -45,6 +45,7 @@ export interface TopologyPole {
     pole_id: string | null
     segment_id: string | null
     feeder_id?: string | null
+    feeder_source?: TopologySource
     lat: number
     lng: number
 }

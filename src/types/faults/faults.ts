@@ -45,7 +45,7 @@ export interface FaultItem {
     note?: string | null
     reported_by?: string | null
     review_note?: string | null
-    allowed_actions: string | null[]
+    allowed_actions: string[]
 }
 
 export interface FaultItemPagedResult {
@@ -105,7 +105,7 @@ export interface ReportedFault {
     note?: string | null
     reported_by?: string | null
     review_note?: string | null
-    allowed_actions: string | null[]
+    allowed_actions: string[]
     client_op_id: string | null
 }
 
