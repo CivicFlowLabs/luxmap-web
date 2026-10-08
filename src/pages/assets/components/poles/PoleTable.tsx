@@ -3,19 +3,19 @@ import { Eye, Edit2, Zap, Bookmark, Lightbulb, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
 import { StatusBadge } from '../../../../components/StatusBadge'
 import type { PoleListItem } from '../../../../types/assets/poles'
-import type { FeederListItem } from '../../../../types/assets/feeders'
+import type { CabinetListItem } from '../../../../types/assets/cabinets'
 import type { SegmentListItem } from '../../../../types/assets/segments'
 import { PoleTableSkeleton } from './PoleTableSkeleton'
 
 export interface PoleTableProps {
   poles: PoleListItem[]
-  cabinets: FeederListItem[]
+  cabinets: CabinetListItem[]
   segments: SegmentListItem[]
   isLoading?: boolean
   flashingPoleCode?: string
   onViewDetail: (pole: PoleListItem) => void
   onEdit: (pole: PoleListItem) => void
-  onViewCabinetDetail: (cabinet: FeederListItem) => void
+  onViewCabinetDetail: (cabinet: CabinetListItem) => void
   onSelectFixture?: (fixtureCode: string) => void
   onSelectCabinet?: (cabinetCode: string) => void
 }
@@ -53,7 +53,7 @@ export const PoleTable: React.FC<PoleTableProps> = ({
             <tr>
               <th className="p-3.5">Mã cột</th>
               <th className="p-3.5">Tuyến đường</th>
-              <th className="p-3.5">Tủ điện nguồn</th>
+              <th className="p-3.5">Tủ điện quản lý</th>
               <th className="p-3.5">Tọa độ GIS</th>
               <th className="p-3.5">Ghi chú</th>
               <th className="p-3.5">Địa bàn</th>
@@ -79,9 +79,11 @@ export const PoleTable: React.FC<PoleTableProps> = ({
                 const segmentName = seg?.segment_name || (seg?.external_ref ? `Tuyến ${seg.external_ref}` : 'Chưa gắn')
 
                 const targetCab = cabinets.find(
-                  (c) => c.feeder_id === pole.feeder_id || (c.external_ref && c.external_ref.toLowerCase() === pole.feeder_id?.toLowerCase())
+                  (c) =>
+                    c.cabinet_id === pole.feeder_id ||
+                    (c.external_ref && c.external_ref.toLowerCase() === pole.feeder_id?.toLowerCase())
                 )
-                const feederLabel = targetCab?.feeder_name || targetCab?.external_ref || 'Chưa gắn'
+                const feederLabel = targetCab?.cabinet_name || targetCab?.external_ref || 'Chưa gắn'
                 const fixtureStatus = pole.active_fixture ? 'normal' : 'out'
                 const poleExternal = pole.external_ref || ''
                 const isFlashing = Boolean(

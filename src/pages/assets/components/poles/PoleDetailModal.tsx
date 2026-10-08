@@ -4,15 +4,14 @@ import { X, MapPin, Zap, Lightbulb, AlertTriangle, Bookmark } from 'lucide-react
 import { StatusBadge } from '../../../../components/StatusBadge'
 import type { PoleListItem } from '../../../../types/assets/poles'
 import type { SegmentListItem } from '../../../../types/assets/segments'
-import type { FeederListItem } from '../../../../types/assets/feeders'
+import type { CabinetListItem } from '../../../../types/assets/cabinets'
 
 interface PoleDetailModalProps {
   isOpen: boolean
   pole: PoleListItem | null
   segments?: SegmentListItem[]
-  cabinets?: FeederListItem[]
+  cabinets?: CabinetListItem[]
   onClose: () => void
-  onOpenEdit?: (pole: PoleListItem) => void
 }
 
 export const PoleDetailModal: React.FC<PoleDetailModalProps> = ({
@@ -21,7 +20,6 @@ export const PoleDetailModal: React.FC<PoleDetailModalProps> = ({
   segments = [],
   cabinets = [],
   onClose,
-  onOpenEdit,
 }) => {
   if (!isOpen || !pole) return null
 
@@ -31,9 +29,9 @@ export const PoleDetailModal: React.FC<PoleDetailModalProps> = ({
   const segmentName = seg?.segment_name || (seg?.external_ref ? `Tuyến ${seg.external_ref}` : 'Chưa gắn tuyến')
 
   const cab = cabinets.find(
-    (c) => c.feeder_id === pole.feeder_id || (c.external_ref && c.external_ref.toLowerCase() === pole.feeder_id?.toLowerCase())
+    (c) => c.cabinet_id === pole.feeder_id || (c.external_ref && c.external_ref.toLowerCase() === pole.feeder_id?.toLowerCase())
   )
-  const feederName = cab?.feeder_name || cab?.external_ref || 'Chưa gắn tủ'
+  const feederName = cab?.cabinet_name || cab?.external_ref || 'Chưa gắn tủ'
 
   const watt = pole.active_fixture?.lamp_watt || 100
   const fixtureStatus = pole.active_fixture ? 'normal' : 'out'
@@ -122,7 +120,7 @@ export const PoleDetailModal: React.FC<PoleDetailModalProps> = ({
             <div className="font-bold text-blue-950 dark:text-blue-200 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
                 <MapPin className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span>Tọa độ Bản đồ GIS & Đấu nối Feeder:</span>
+                <span>Tọa độ Bản đồ GIS & Đấu nối Tủ điện:</span>
               </span>
               <span className="font-mono text-xs text-blue-700 dark:text-blue-300 font-bold bg-blue-100/70 dark:bg-blue-900/50 px-2 py-0.5 rounded-md">
                 GPS: {lat.toFixed(6)}, {lng.toFixed(6)}
@@ -179,18 +177,6 @@ export const PoleDetailModal: React.FC<PoleDetailModalProps> = ({
 
         {/* Footer */}
         <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 flex justify-end gap-2">
-          {onOpenEdit && (
-            <button
-              type="button"
-              onClick={() => {
-                onClose()
-                onOpenEdit(pole)
-              }}
-              className="px-4 py-2 bg-[#1f3864] dark:bg-blue-600 hover:bg-[#1f3864]/90 dark:hover:bg-blue-500 text-white font-bold rounded-xl text-xs transition cursor-pointer"
-            >
-              Chỉnh Sửa
-            </button>
-          )}
           <button
             type="button"
             onClick={onClose}

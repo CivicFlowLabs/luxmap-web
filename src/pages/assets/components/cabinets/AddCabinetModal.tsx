@@ -11,28 +11,25 @@ import {
   Cpu,
 } from 'lucide-react'
 import { DatePicker } from '../../../../components/DatePicker'
-import type { FeederListItem } from '../../../../types/assets/feeders'
+import type { CabinetListItem } from '../../../../types/assets/cabinets'
 import type { SegmentListItem } from '../../../../types/assets/segments'
 
 interface CabinetRowDraft {
   rowId: string
   cabinet_id: string
   cabinet_name: string
-  voltage_v: number
-  current_load_kw: string
   lat: string
   lng: string
-  landmark_note: string
 }
 
 interface AddCabinetModalProps {
   isOpen: boolean
   onClose: () => void
-  onAddCabinet?: (data: FeederListItem) => void
-  onAddCabinets?: (cabinets: FeederListItem[]) => void
+  onAddCabinet?: (data: CabinetListItem) => void
+  onAddCabinets?: (cabinets: CabinetListItem[]) => void
   existingCount: number
   availableSegments?: SegmentListItem[]
-  availableCabinets?: FeederListItem[]
+  availableCabinets?: CabinetListItem[]
 }
 
 const DEFAULT_SEGMENTS: SegmentListItem[] = [
@@ -149,11 +146,8 @@ export const AddCabinetModal: React.FC<AddCabinetModalProps> = ({
       rowId: `cab-row-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       cabinet_id: autoCabinetId,
       cabinet_name: autoCabinetName,
-      voltage_v: 220,
-      current_load_kw: '10.0',
       lat: baseLat.toFixed(4),
       lng: baseLng.toFixed(4),
-      landmark_note: '',
     }
 
     setRows((prev) => [...prev, newDraft])
@@ -185,7 +179,7 @@ export const AddCabinetModal: React.FC<AddCabinetModalProps> = ({
     }
 
     const idSet = new Set<string>()
-    const cabinetsToSave: FeederListItem[] = []
+    const cabinetsToSave: CabinetListItem[] = []
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]
@@ -204,7 +198,9 @@ export const AddCabinetModal: React.FC<AddCabinetModalProps> = ({
       idSet.add(autoId.toLowerCase())
 
       const alreadyExists = availableCabinets.some(
-        (c) => c.feeder_id && c.feeder_id.toLowerCase() === autoId.toLowerCase()
+        (c) =>
+          (c.cabinet_id && c.cabinet_id.toLowerCase() === autoId.toLowerCase()) ||
+          (c.external_ref && c.external_ref.toLowerCase() === autoId.toLowerCase())
       )
       if (alreadyExists) {
         setErrorMsg(`Mã tủ điện "${autoId}" đã tồn tại trên hệ thống GIS! Vui lòng chọn ký hiệu khác!`)
@@ -220,12 +216,16 @@ export const AddCabinetModal: React.FC<AddCabinetModalProps> = ({
       }
 
       cabinetsToSave.push({
-        feeder_id: autoId,
+        cabinet_id: autoId,
         external_ref: autoId,
-        feeder_name: trimmedName,
+        cabinet_name: trimmedName,
         commune_id: currentSegment?.commune_id || 'COM-001',
-        has_geometry: !isNaN(parsedLat) && !isNaN(parsedLng),
-        pole_count: 0,
+        data_source: 'field',
+        location: {
+          lat: parsedLat,
+          lng: parsedLng,
+        },
+        feeder_ids: [],
         updated_at: new Date().toISOString(),
       })
     }
@@ -254,7 +254,7 @@ export const AddCabinetModal: React.FC<AddCabinetModalProps> = ({
                 Khai Báo Danh Sách Tủ Điện Điều Khiển Tuyến
               </h3>
               <p className="text-xs text-purple-200 mt-0.5">
-                Thiết lập các tủ điện cấp nguồn trên tuyến đường (Chuẩn FeederListItem)
+                Thiết lập các tủ điện điều khiển trên tuyến đường chiếu sáng
               </p>
             </div>
           </div>
@@ -285,7 +285,7 @@ export const AddCabinetModal: React.FC<AddCabinetModalProps> = ({
                 <span>1. Thiết Lập Tuyến Đường Cài Đặt Tủ Điện</span>
               </div>
               <span className="text-[11px] text-purple-600 dark:text-purple-400 font-normal">
-                (1 Tuyến đường có thể có nhiều tủ điện phụ trách các lộ độc lập)
+                (1 Tuyến đường có thể có nhiều tủ điện phụ trách các phân đoạn)
               </span>
             </div>
 
@@ -369,18 +369,15 @@ export const AddCabinetModal: React.FC<AddCabinetModalProps> = ({
                   <thead className="bg-purple-50/80 dark:bg-purple-950/40 text-purple-950 dark:text-purple-200 sticky top-0 z-10 font-bold border-b border-purple-200 dark:border-purple-900/60">
                     <tr>
                       <th className="py-2.5 px-3 w-10 text-center">#</th>
-                      <th className="py-2.5 px-3 w-52">Tên Tủ Điện</th>
-                      <th className="py-2.5 px-3 w-28">Điện Áp</th>
-                      <th className="py-2.5 px-3 w-28">Công Suất (kW)</th>
-                      <th className="py-2.5 px-3 w-60">Tọa Độ GPS (Lat / Lng)</th>
-                      <th className="py-2.5 px-3">Ghi Chú Mốc Thực Địa</th>
+                      <th className="py-2.5 px-3 w-64">Tên Tủ Điện</th>
+                      <th className="py-2.5 px-3">Tọa Độ GPS (Lat / Lng)</th>
                       <th className="py-2.5 px-3 w-12 text-center">Xóa</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {rows.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-slate-400 dark:text-slate-500">
+                        <td colSpan={4} className="py-8 text-center text-slate-400 dark:text-slate-500">
                           <div className="flex flex-col items-center justify-center gap-2">
                             <Zap className="w-8 h-8 text-purple-300 dark:text-purple-800 stroke-[1.5]" />
                             <p className="font-medium text-xs">Chưa có tủ điện nào trong danh sách.</p>
@@ -409,26 +406,6 @@ export const AddCabinetModal: React.FC<AddCabinetModalProps> = ({
                             />
                           </td>
                           <td className="py-2 px-3">
-                            <select
-                              value={row.voltage_v}
-                              onChange={(e) => handleUpdateRow(row.rowId, 'voltage_v', Number(e.target.value))}
-                              className="w-full p-1.5 bg-white dark:bg-slate-950 border border-purple-200 dark:border-purple-900 rounded-lg text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer"
-                            >
-                              <option value={220}>220V</option>
-                              <option value={380}>380V</option>
-                            </select>
-                          </td>
-                          <td className="py-2 px-3">
-                            <input
-                              type="number"
-                              step="0.1"
-                              value={row.current_load_kw}
-                              onChange={(e) => handleUpdateRow(row.rowId, 'current_load_kw', e.target.value)}
-                              placeholder="10.5"
-                              className="w-full p-1.5 bg-slate-50 dark:bg-slate-950 border border-purple-200 dark:border-purple-900 rounded-lg font-mono text-xs text-slate-900 dark:text-slate-100 focus:outline-none"
-                            />
-                          </td>
-                          <td className="py-2 px-3">
                             <div className="flex items-center gap-1.5">
                               <input
                                 type="text"
@@ -445,15 +422,6 @@ export const AddCabinetModal: React.FC<AddCabinetModalProps> = ({
                                 className="w-full p-1.5 bg-slate-50 dark:bg-slate-950 border border-purple-200 dark:border-purple-900 rounded-lg font-mono text-xs text-slate-900 dark:text-slate-100 focus:outline-none"
                               />
                             </div>
-                          </td>
-                          <td className="py-2 px-3">
-                            <input
-                              type="text"
-                              value={row.landmark_note}
-                              onChange={(e) => handleUpdateRow(row.rowId, 'landmark_note', e.target.value)}
-                              placeholder="Mốc thực tế: ngã ba..."
-                              className="w-full p-1.5 bg-slate-50 dark:bg-slate-950 border border-purple-200 dark:border-purple-900 rounded-lg text-xs text-slate-900 dark:text-slate-100 focus:outline-none"
-                            />
                           </td>
                           <td className="py-2 px-3 text-center">
                             <button

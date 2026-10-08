@@ -163,10 +163,6 @@ export const SegmentsTab: React.FC<SegmentsTabProps> = ({
       <SegmentDetailModal
         segment={detailSegment}
         onClose={() => setDetailSegment(null)}
-        onOpenEdit={(seg) => {
-          setDetailSegment(null)
-          setEditSegment(seg)
-        }}
       />
 
       <EditSegmentModal

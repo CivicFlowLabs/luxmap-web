@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { Search, Plus, Upload, Filter } from 'lucide-react'
 import type { PoleListItem } from '../../../../types/assets/poles'
-import type { FeederListItem } from '../../../../types/assets/feeders'
+import type { CabinetListItem } from '../../../../types/assets/cabinets'
 import type { SegmentListItem } from '../../../../types/assets/segments'
 import { PoleTable } from './PoleTable'
 import { AddPoleModal } from './AddPoleModal'
@@ -12,7 +12,7 @@ import { TablePagination } from '../common/TablePagination'
 
 export interface PolesTabProps {
   poles: PoleListItem[]
-  cabinets: FeederListItem[]
+  cabinets: CabinetListItem[]
   segments: SegmentListItem[]
   isLoading?: boolean
   activePoleCode?: string
@@ -21,7 +21,7 @@ export interface PolesTabProps {
   onAddPoles: (dataList: PoleListItem[]) => void
   onUpdatePole: (updated: PoleListItem) => void
   onOpenImport: () => void
-  onViewCabinetDetail?: (cabinet: FeederListItem) => void
+  onViewCabinetDetail?: (cabinet: CabinetListItem) => void
   onSelectFixture?: (fixtureCode: string) => void
   onSelectCabinet?: (cabinetCode: string) => void
 }
@@ -54,7 +54,7 @@ export const PolesTab: React.FC<PolesTabProps> = ({
   const [isAddPoleModalOpen, setIsAddPoleModalOpen] = useState(false)
   const [detailPole, setDetailPole] = useState<PoleListItem | null>(null)
   const [editPole, setEditPole] = useState<PoleListItem | null>(null)
-  const [internalCabinetDetail, setInternalCabinetDetail] = useState<FeederListItem | null>(null)
+  const [internalCabinetDetail, setInternalCabinetDetail] = useState<CabinetListItem | null>(null)
 
   // Filtered Poles
   const filteredPoles = useMemo(() => {
@@ -62,8 +62,10 @@ export const PolesTab: React.FC<PolesTabProps> = ({
       const q = searchQuery.toLowerCase().trim()
       const seg = segments.find((s) => s.segment_id === pole.segment_id)
       const segName = seg?.segment_name || pole.segment_id || ''
-      const cab = cabinets.find((c) => c.feeder_id === pole.feeder_id)
-      const cabName = cab?.feeder_name || pole.feeder_id || ''
+      const cab = cabinets.find(
+        (c) => c.cabinet_id === pole.feeder_id || (c.external_ref && c.external_ref.toLowerCase() === pole.feeder_id?.toLowerCase())
+      )
+      const cabName = cab?.cabinet_name || cab?.external_ref || pole.feeder_id || ''
 
       const matchesQuery =
         !q ||
@@ -123,7 +125,7 @@ export const PolesTab: React.FC<PolesTabProps> = ({
     }
   }
 
-  const handleCabinetClick = (cab: FeederListItem) => {
+  const handleCabinetClick = (cab: CabinetListItem) => {
     if (onViewCabinetDetail) {
       onViewCabinetDetail(cab)
     } else {
@@ -241,10 +243,6 @@ export const PolesTab: React.FC<PolesTabProps> = ({
         segments={segments}
         cabinets={cabinets}
         onClose={() => setDetailPole(null)}
-        onOpenEdit={(pole) => {
-          setDetailPole(null)
-          setEditPole(pole)
-        }}
       />
 
       {/* Modal Detail Cabinet (when clicked inside pole row) */}

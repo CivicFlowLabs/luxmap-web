@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import type { PoleListItem } from '../../../../types/assets/poles'
 import type { SegmentListItem } from '../../../../types/assets/segments'
-import type { FeederListItem } from '../../../../types/assets/feeders'
+import type { CabinetListItem } from '../../../../types/assets/cabinets'
 
 interface AddPoleModalProps {
   isOpen: boolean
@@ -22,7 +22,7 @@ interface AddPoleModalProps {
   onAddPoles: (poles: PoleListItem[]) => void
   existingPoleCount: number
   availableSegments?: SegmentListItem[]
-  availableCabinets?: FeederListItem[]
+  availableCabinets?: CabinetListItem[]
 }
 
 interface PoleRowDraft {
@@ -31,7 +31,7 @@ interface PoleRowDraft {
   lat: string
   lng: string
   lamp_watt: number
-  atlas: string
+  note: string
   near_sensitive_poi: boolean
 }
 
@@ -63,7 +63,9 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
   // Current active metadata
   const currentSegment = segmentList.find((s) => s.segment_id === selectedSegmentId)
   const availableCabinetsOnSegment = availableCabinets || []
-  const currentCabinet = availableCabinetsOnSegment.find((c) => c.feeder_id === selectedCabinetId)
+  const currentCabinet = availableCabinetsOnSegment.find(
+    (c) => c.cabinet_id === selectedCabinetId || c.external_ref === selectedCabinetId
+  )
 
   // Handle segment change: reset cabinet selection
   const handleSegmentChange = (newSegmentId: string) => {
@@ -120,7 +122,7 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
       lat: nextLat,
       lng: nextLng,
       lamp_watt: 100,
-      atlas: '',
+      note: '',
       near_sensitive_poi: false,
     }
 
@@ -224,7 +226,7 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
           install_date: new Date().toISOString().split('T')[0],
           data_source: 'field',
         },
-        note: row.atlas?.trim() ? row.atlas.trim() : null,
+        note: row.note?.trim() ? row.note.trim() : null,
         updated_at: new Date().toISOString(),
       })
     }
@@ -318,7 +320,7 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
               {/* 2. Select Cabinet */}
               <div className="space-y-1">
                 <label className="font-bold text-slate-700 dark:text-slate-300 text-xs flex items-center justify-between">
-                  <span>2. Tủ điện điều khiển trực tiếp:</span>
+                  <span>2. Tủ điện quản lý:</span>
                   <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold">(1 Cột - 1 Tủ)</span>
                 </label>
                 <select
@@ -342,8 +344,8 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
                       : '-- Vui lòng chọn Tuyến trước --'}
                   </option>
                   {availableCabinetsOnSegment.map((cab) => (
-                    <option key={cab.feeder_id || ''} value={cab.feeder_id || ''} className="text-slate-900 dark:text-slate-100">
-                      ⚡️ {cab.feeder_name || cab.feeder_id} ({cab.feeder_id})
+                    <option key={cab.cabinet_id || cab.external_ref || ''} value={cab.cabinet_id || cab.external_ref || ''} className="text-slate-900 dark:text-slate-100">
+                      ⚡️ {cab.cabinet_name || cab.external_ref || cab.cabinet_id} ({cab.external_ref || cab.cabinet_id})
                     </option>
                   ))}
                 </select>
@@ -365,7 +367,7 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
                 {currentCabinet && (
                   <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1">
                     <Zap className="w-3 h-3 text-indigo-500" />
-                    <span>{currentCabinet.feeder_name || currentCabinet.feeder_id}</span>
+                    <span>{currentCabinet.cabinet_name || currentCabinet.external_ref || currentCabinet.cabinet_id}</span>
                   </span>
                 )}
               </div>
@@ -484,8 +486,8 @@ export const AddPoleModal: React.FC<AddPoleModalProps> = ({
                           <td className="py-2 px-3">
                             <input
                               type="text"
-                              value={row.atlas}
-                              onChange={(e) => handleUpdateRow(row.rowId, 'atlas', e.target.value)}
+                              value={row.note}
+                              onChange={(e) => handleUpdateRow(row.rowId, 'note', e.target.value)}
                               placeholder="Gần ngã 3..."
                               className="w-full p-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg text-xs text-slate-900 dark:text-slate-100 focus:outline-none"
                             />

@@ -1,6 +1,6 @@
 import React from 'react'
 import { createPortal } from 'react-dom'
-import { X, Route, MapPin, CheckCircle2, Edit3 } from 'lucide-react'
+import { X, Route, MapPin, CheckCircle2 } from 'lucide-react'
 import { SegmentRouteMap } from '../../../../components/SegmentRouteMap'
 import type { SegmentListItem } from '../../../../types/assets/segments'
 import { getDataSourceDisplayName } from '../../../../constants/enums'
@@ -9,13 +9,11 @@ import { formatCommuneDisplayName } from '../../../../constants/communes'
 interface SegmentDetailModalProps {
   segment: SegmentListItem | null
   onClose: () => void
-  onOpenEdit?: (segment: SegmentListItem) => void
 }
 
 export const SegmentDetailModal: React.FC<SegmentDetailModalProps> = ({
   segment,
   onClose,
-  onOpenEdit,
 }) => {
   if (!segment) return null
 
@@ -131,16 +129,6 @@ export const SegmentDetailModal: React.FC<SegmentDetailModalProps> = ({
             >
               Đóng
             </button>
-            {onOpenEdit && (
-              <button
-                type="button"
-                onClick={() => onOpenEdit(segment)}
-                className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5 cursor-pointer shadow-xs"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>Chỉnh sửa</span>
-              </button>
-            )}
           </div>
         </div>
       </div>
