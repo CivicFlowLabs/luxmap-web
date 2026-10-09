@@ -5,7 +5,7 @@ import type { RootState } from '../../redux/rootReducer'
 import { fetchAssetsRequest } from '../../feature/assets/assetSlice'
 import { assetAPI } from '../../feature/assets/assetAPI'
 import type { PoleListItem, CreatePoleRequest, UpdatePoleRequest } from '../../types/assets/poles'
-import type { FeederListItem, CreateFeederRequest, UpdateFeederRequest } from '../../types/assets/feeders'
+import type { CabinetListItem, CreateCabinetRequest, UpdateCabinetRequest } from '../../types/assets/cabinets'
 import type { SegmentListItem, CreateSegmentRequest, UpdateSegmentRequest } from '../../types/assets/segments'
 import type { ActiveFixture, CreateFixtureRequest, RetireFixtureRequest } from '../../types/assets/fixtures'
 
@@ -27,7 +27,7 @@ export function useAssetData() {
   } = useSelector((state: RootState) => state.assets)
 
   const [poles, setPoles] = useState<PoleListItem[]>([])
-  const [cabinets, setCabinets] = useState<FeederListItem[]>([])
+  const [cabinets, setCabinets] = useState<CabinetListItem[]>([])
   const [segments, setSegments] = useState<SegmentListItem[]>([])
   const [successBanner, setSuccessBanner] = useState<string | null>(null)
 
@@ -139,6 +139,13 @@ export function useAssetData() {
       return
     }
 
+    // Optimistic Update: cập nhật ngay bản ghi trên bảng cục bộ
+    const previousPoles = poles
+    setPoles((prev) =>
+      prev.map((p) => (p.pole_id === updated.pole_id ? { ...p, ...updated } : p))
+    )
+    showBanner(`Đã cập nhật thông số cột đèn "${updated.external_ref || updated.pole_id}"!`)
+
     try {
       const updateReq: UpdatePoleRequest = {
         external_ref: updated.external_ref || updated.pole_id,
@@ -151,10 +158,9 @@ export function useAssetData() {
       }
 
       await assetAPI.updatePole(updated.pole_id, updateReq)
-      dispatch(fetchAssetsRequest())
-
-      showBanner(`Đã cập nhật thông số cột đèn "${updated.external_ref || updated.pole_id}"!`)
     } catch (err: any) {
+      // Rollback lại state cũ nếu xảy ra lỗi
+      setPoles(previousPoles)
       console.error('Failed to update pole:', err)
       const errorMsg =
         err?.response?.data?.detail ||
@@ -220,31 +226,32 @@ export function useAssetData() {
     }
   }
 
-  // --- Cabinet / Feeder Handlers ---
-  const handleAddCabinet = async (data: FeederListItem) => {
+  // --- Cabinet Handlers ---
+  const handleAddCabinet = async (data: CabinetListItem) => {
     await handleAddCabinets([data])
   }
 
-  const handleAddCabinets = async (newCabinetsList: FeederListItem[]) => {
+  const handleAddCabinets = async (newCabinetsList: CabinetListItem[]) => {
     if (!newCabinetsList || newCabinetsList.length === 0) return
 
     try {
       for (const item of newCabinetsList) {
-        const createReq: CreateFeederRequest = {
-          external_ref: item.external_ref || item.feeder_id || null,
-          feeder_name: item.feeder_name || item.feeder_id || 'Tủ điện mới',
+        const createReq: CreateCabinetRequest = {
+          external_ref: item.external_ref || item.cabinet_id || null,
+          cabinet_name: item.cabinet_name || item.cabinet_id || 'Tủ điện mới',
           commune_id: item.commune_id || 'COM-001',
-          geom_wkt: (item as any).location
-            ? `POINT(${(item as any).location.lng} ${(item as any).location.lat})`
+          geom_wkt: item.location
+            ? `POINT(${item.location.lng} ${item.location.lat})`
             : null,
+          data_source: item.data_source || 'field',
         }
-        await assetAPI.createFeeder(createReq)
+        await assetAPI.createCabinet(createReq)
       }
 
       dispatch(fetchAssetsRequest())
 
       if (newCabinetsList.length === 1) {
-        showBanner(`Đã lưu thành công tủ điện "${newCabinetsList[0].feeder_name || newCabinetsList[0].feeder_id}" vào Hệ thống!`)
+        showBanner(`Đã lưu thành công tủ điện "${newCabinetsList[0].cabinet_name || newCabinetsList[0].cabinet_id}" vào Hệ thống!`)
       } else {
         showBanner(`Đã lưu thành công ${newCabinetsList.length} tủ điện vào Hệ thống!`)
       }
@@ -259,26 +266,33 @@ export function useAssetData() {
     }
   }
 
-  const handleUpdateCabinet = async (updated: FeederListItem) => {
-    if (!updated.feeder_id) {
+  const handleUpdateCabinet = async (updated: CabinetListItem) => {
+    if (!updated.cabinet_id) {
       toast.error('Thiếu mã định danh tủ điện để cập nhật!')
       return
     }
 
+    // Optimistic Update: cập nhật ngay bản ghi trên bảng cục bộ
+    const previousCabinets = cabinets
+    setCabinets((prev) =>
+      prev.map((c) => (c.cabinet_id === updated.cabinet_id ? { ...c, ...updated } : c))
+    )
+    showBanner(`Đã cập nhật thông số tủ điện "${updated.cabinet_name || updated.cabinet_id}"!`)
+
     try {
-      const updateReq: UpdateFeederRequest = {
-        external_ref: updated.external_ref || updated.feeder_id,
-        feeder_name: updated.feeder_name || updated.feeder_id,
-        geom_wkt: (updated as any).location
-          ? `POINT(${(updated as any).location.lng} ${(updated as any).location.lat})`
+      const updateReq: UpdateCabinetRequest = {
+        external_ref: updated.external_ref || updated.cabinet_id,
+        cabinet_name: updated.cabinet_name || updated.cabinet_id,
+        geom_wkt: updated.location
+          ? `POINT(${updated.location.lng} ${updated.location.lat})`
           : null,
+        data_source: updated.data_source || 'field',
       }
 
-      await assetAPI.updateFeeder(updated.feeder_id, updateReq)
-      dispatch(fetchAssetsRequest())
-
-      showBanner(`Đã cập nhật thông số tủ điện "${updated.feeder_name || updated.feeder_id}"!`)
+      await assetAPI.updateCabinet(updated.cabinet_id, updateReq)
     } catch (err: any) {
+      // Rollback lại state cũ nếu xảy ra lỗi
+      setCabinets(previousCabinets)
       console.error('Failed to update cabinet:', err)
       const errorMsg =
         err?.response?.data?.detail ||
@@ -298,7 +312,9 @@ export function useAssetData() {
         road_class: data.road_class || 'inter_commune',
         length_m: Number(data.length_m) || 0,
         commune_id: data.commune_id || 'COM-001',
-        geom_wkt: (data as any).geom_wkt || 'LINESTRING(106.5 10.9, 106.51 10.91)',
+        geom_wkt: 'geom_wkt' in data && typeof data.geom_wkt === 'string'
+          ? data.geom_wkt
+          : 'LINESTRING(106.5 10.9, 106.51 10.91)',
         data_source: data.data_source || 'field',
       }
 
@@ -323,21 +339,29 @@ export function useAssetData() {
       return
     }
 
+    // Optimistic Update: cập nhật ngay bản ghi trên bảng cục bộ
+    const previousSegments = segments
+    setSegments((prev) =>
+      prev.map((s) => (s.segment_id === updated.segment_id ? { ...s, ...updated } : s))
+    )
+    showBanner(`Đã cập nhật thông tin tuyến đường "${updated.segment_name}"!`)
+
     try {
       const updateReq: UpdateSegmentRequest = {
         external_ref: updated.external_ref || updated.segment_id,
         segment_name: updated.segment_name,
         road_class: updated.road_class || 'inter_commune',
         length_m: Number(updated.length_m) || 0,
-        geom_wkt: (updated as any).geom_wkt || null,
+        geom_wkt: 'geom_wkt' in updated && typeof updated.geom_wkt === 'string'
+          ? updated.geom_wkt
+          : null,
         data_source: updated.data_source || 'field',
       }
 
       await assetAPI.updateSegment(updated.segment_id, updateReq)
-      dispatch(fetchAssetsRequest())
-
-      showBanner(`Đã cập nhật thông tin tuyến đường "${updated.segment_name}"!`)
     } catch (err: any) {
+      // Rollback lại state cũ nếu xảy ra lỗi
+      setSegments(previousSegments)
       console.error('Failed to update segment:', err)
       const errorMsg =
         err?.response?.data?.detail ||

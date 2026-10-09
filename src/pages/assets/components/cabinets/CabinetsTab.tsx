@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { Search, Plus, Upload, Filter } from 'lucide-react'
-import type { FeederListItem } from '../../../../types/assets/feeders'
+import type { CabinetListItem } from '../../../../types/assets/cabinets'
 import type { SegmentListItem } from '../../../../types/assets/segments'
 import { CabinetTable } from './CabinetTable'
 import { AddCabinetModal } from './AddCabinetModal'
@@ -9,14 +9,14 @@ import { CabinetDetailModal } from './CabinetDetailModal'
 import { TablePagination } from '../common/TablePagination'
 
 export interface CabinetsTabProps {
-  cabinets: FeederListItem[]
+  cabinets: CabinetListItem[]
   segments: SegmentListItem[]
   isLoading?: boolean
   activeCabinetCode?: string
   onClearActiveCabinet?: () => void
-  onAddCabinet: (data: FeederListItem) => void
-  onAddCabinets: (dataList: FeederListItem[]) => void
-  onUpdateCabinet: (updated: FeederListItem) => void
+  onAddCabinet: (data: CabinetListItem) => void
+  onAddCabinets: (dataList: CabinetListItem[]) => void
+  onUpdateCabinet: (updated: CabinetListItem) => void
   onOpenImport: () => void
 }
 
@@ -42,8 +42,8 @@ export const CabinetsTab: React.FC<CabinetsTabProps> = ({
 
   // Modals state
   const [isAddCabinetModalOpen, setIsAddCabinetModalOpen] = useState(false)
-  const [detailCabinet, setDetailCabinet] = useState<FeederListItem | null>(null)
-  const [editCabinet, setEditCabinet] = useState<FeederListItem | null>(null)
+  const [detailCabinet, setDetailCabinet] = useState<CabinetListItem | null>(null)
+  const [editCabinet, setEditCabinet] = useState<CabinetListItem | null>(null)
 
   // Filtered Cabinets
   const filteredCabinets = useMemo(() => {
@@ -51,14 +51,15 @@ export const CabinetsTab: React.FC<CabinetsTabProps> = ({
       const q = searchQuery.toLowerCase().trim()
       const matchesQuery =
         !q ||
-        (cab.feeder_id && cab.feeder_id.toLowerCase().includes(q)) ||
-        (cab.feeder_name && cab.feeder_name.toLowerCase().includes(q)) ||
+        (cab.cabinet_id && cab.cabinet_id.toLowerCase().includes(q)) ||
+        (cab.cabinet_name && cab.cabinet_name.toLowerCase().includes(q)) ||
         (cab.external_ref && cab.external_ref.toLowerCase().includes(q)) ||
         (cab.commune_id && cab.commune_id.toLowerCase().includes(q))
 
+      const hasGeo = Boolean(cab.location?.lat && cab.location?.lng)
       const matchesStatus =
         statusFilter === 'all' ||
-        (statusFilter === 'with_geo' ? cab.has_geometry : !cab.has_geometry)
+        (statusFilter === 'with_geo' ? hasGeo : !hasGeo)
 
       return matchesQuery && matchesStatus
     })
@@ -98,9 +99,9 @@ export const CabinetsTab: React.FC<CabinetsTabProps> = ({
     }
   }, [activeCabinetCode, filteredCabinets, pageSize, onClearActiveCabinet])
 
-  const handleSaveCabinet = (updated: FeederListItem) => {
+  const handleSaveCabinet = (updated: CabinetListItem) => {
     onUpdateCabinet(updated)
-    if (detailCabinet && detailCabinet.feeder_id === updated.feeder_id) {
+    if (detailCabinet && detailCabinet.cabinet_id === updated.cabinet_id) {
       setDetailCabinet(updated)
     }
   }
@@ -207,10 +208,6 @@ export const CabinetsTab: React.FC<CabinetsTabProps> = ({
       <CabinetDetailModal
         cabinet={detailCabinet}
         onClose={() => setDetailCabinet(null)}
-        onOpenEdit={(cab) => {
-          setDetailCabinet(null)
-          setEditCabinet(cab)
-        }}
       />
 
       <EditCabinetModal

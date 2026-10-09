@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import assetAPI from './assetAPI'
 import type { ImportResult } from '../../types/assets/import'
 import type { SegmentListItemPagedResult } from '../../types/assets/segments'
-import type { FeederListItemPagedResult } from '../../types/assets/feeders'
+import type { CabinetListItemPagedResult } from '../../types/assets/cabinets'
 import type { PoleListItemPagedResult } from '../../types/assets/poles'
 import {
   fetchAssetsRequest,
@@ -21,20 +21,20 @@ import {
  */
 function* handleFetchAssets() {
   try {
-    const [segmentsRes, feedersRes, polesRes]: [
+    const [segmentsRes, cabinetsRes, polesRes]: [
       SegmentListItemPagedResult,
-      FeederListItemPagedResult,
+      CabinetListItemPagedResult,
       PoleListItemPagedResult
     ] = yield all([
       call(assetAPI.getSegments, { page_size: 1000 }),
-      call(assetAPI.getFeeders, { page_size: 1000 }),
+      call(assetAPI.getCabinets, { page_size: 1000 }),
       call(assetAPI.getPoles, { page_size: 1000 }),
     ])
 
     yield put(
       fetchAssetsSuccess({
         segments: segmentsRes.items ?? [],
-        cabinets: feedersRes.items ?? [],
+        cabinets: cabinetsRes.items ?? [],
         poles: polesRes.items ?? [],
       })
     )
@@ -62,7 +62,7 @@ function* handleImportAsset(action: PayloadAction<ImportAssetPayload>) {
         result = (yield call(assetAPI.importSegments, file)) as ImportResult
         break
       case 'cabinets':
-        result = (yield call(assetAPI.importFeeders, file)) as ImportResult
+        result = (yield call(assetAPI.importCabinets, file)) as ImportResult
         break
       case 'poles':
       case 'poles_and_fixtures':

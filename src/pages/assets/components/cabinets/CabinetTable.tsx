@@ -1,15 +1,15 @@
 import React, { useEffect } from 'react'
 import { Eye, Edit2, Zap, CheckCircle, MapPin } from 'lucide-react'
-import type { FeederListItem } from '../../../../types/assets/feeders'
+import type { CabinetListItem } from '../../../../types/assets/cabinets'
 import { CabinetTableSkeleton } from './CabinetTableSkeleton'
 import { getCommuneName } from '../../../../constants/communes'
 
 export interface CabinetTableProps {
-  cabinets: FeederListItem[]
+  cabinets: CabinetListItem[]
   isLoading?: boolean
   flashingCabinetCode?: string
-  onViewDetail: (cabinet: FeederListItem) => void
-  onEdit: (cabinet: FeederListItem) => void
+  onViewDetail: (cabinet: CabinetListItem) => void
+  onEdit: (cabinet: CabinetListItem) => void
 }
 
 export const CabinetTable: React.FC<CabinetTableProps> = ({
@@ -39,11 +39,11 @@ export const CabinetTable: React.FC<CabinetTableProps> = ({
           <thead className="bg-slate-50 dark:bg-slate-950/80 text-slate-500 dark:text-slate-200 font-semibold border-b border-slate-200 dark:border-slate-700">
             <tr>
               <th className="p-3.5">Mã tủ điện</th>
-              <th className="p-3.5">Tên tủ điện / Lộ nguồn</th>
+              <th className="p-3.5">Tên tủ điện</th>
               <th className="p-3.5">Địa bàn</th>
-              <th className="p-3.5">Số cột quản lý</th>
+              <th className="p-3.5">Số mạch nguồn</th>
               <th className="p-3.5">Tọa độ GIS</th>
-              <th className="p-3.5">Trạng thái</th>
+              <th className="p-3.5">Nguồn dữ liệu</th>
               <th className="p-3.5 text-right">Thao tác</th>
             </tr>
           </thead>
@@ -64,40 +64,41 @@ export const CabinetTable: React.FC<CabinetTableProps> = ({
                   cabExternal &&
                   cabExternal.toLowerCase() === flashingCabinetCode.toLowerCase()
                 )
+                const hasGeo = Boolean(cab.location?.lat && cab.location?.lng)
 
                 return (
                   <tr
-                    key={cab.external_ref || cab.feeder_id || Math.random()}
+                    key={cab.external_ref || cab.cabinet_id || Math.random()}
                     id={cabExternal ? `cabinet-row-${cabExternal.toLowerCase()}` : undefined}
                     className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/80 transition ${
                       isFlashing ? 'animate-row-flash' : ''
                     }`}
                   >
                   <td className="p-3.5 font-bold font-mono text-slate-900 dark:text-white">
-                    {cab.external_ref}
+                    {cab.external_ref || cab.cabinet_id}
                   </td>
                   <td className="p-3.5">
                     <div className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                       <Zap className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                      <span>{cab.feeder_name || cab.external_ref}</span>
+                      <span>{cab.cabinet_name || cab.external_ref || cab.cabinet_id}</span>
                     </div>
                   </td>
                   <td className="p-3.5 text-slate-600 dark:text-slate-300 font-medium">
                     {getCommuneName(cab.commune_id)}
                   </td>
                   <td className="p-3.5 font-bold text-slate-800 dark:text-slate-200 font-mono">
-                    {cab.pole_count} cột
+                    {cab.feeder_ids?.length || 0} mạch
                   </td>
                   <td className="p-3.5">
                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
                       <MapPin className="w-3.5 h-3.5 text-blue-500" />
-                      <span>{cab.has_geometry ? 'Đã có tọa độ' : 'Chưa định vị'}</span>
+                      <span>{hasGeo ? `${cab.location.lat.toFixed(4)}, ${cab.location.lng.toFixed(4)}` : 'Chưa định vị'}</span>
                     </span>
                   </td>
                   <td className="p-3.5">
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                       <CheckCircle className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                      <span>Đang cấp điện</span>
+                      <span>{cab.data_source || 'field'}</span>
                     </span>
                   </td>
                   <td className="p-3.5 text-right space-x-1.5 whitespace-nowrap">

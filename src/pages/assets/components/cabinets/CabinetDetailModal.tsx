@@ -1,20 +1,20 @@
 import React from 'react'
 import { createPortal } from 'react-dom'
-import { X, Zap, MapPin, Edit3 } from 'lucide-react'
-import type { FeederListItem } from '../../../../types/assets/feeders'
+import { X, Zap, MapPin } from 'lucide-react'
+import type { CabinetListItem } from '../../../../types/assets/cabinets'
 
 interface CabinetDetailModalProps {
-  cabinet: FeederListItem | null
+  cabinet: CabinetListItem | null
   onClose: () => void
-  onOpenEdit?: (cabinet: FeederListItem) => void
 }
 
 export const CabinetDetailModal: React.FC<CabinetDetailModalProps> = ({
   cabinet,
   onClose,
-  onOpenEdit,
 }) => {
   if (!cabinet) return null
+
+  const hasGeo = Boolean(cabinet.location?.lat && cabinet.location?.lng)
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
@@ -28,13 +28,13 @@ export const CabinetDetailModal: React.FC<CabinetDetailModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-mono text-xs bg-white/25 px-2 py-0.5 rounded-md font-bold">
-                  {cabinet.external_ref}
+                  {cabinet.external_ref || cabinet.cabinet_id}
                 </span>
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-900/40 text-emerald-100">
-                  Đang Cấp Điện
+                  {cabinet.data_source || 'field'}
                 </span>
               </div>
-              <h3 className="font-extrabold text-base mt-0.5">{cabinet.feeder_name || cabinet.external_ref}</h3>
+              <h3 className="font-extrabold text-base mt-0.5">{cabinet.cabinet_name || cabinet.external_ref || cabinet.cabinet_id}</h3>
             </div>
           </div>
           <button
@@ -51,10 +51,10 @@ export const CabinetDetailModal: React.FC<CabinetDetailModalProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200 dark:border-slate-700/60">
               <div className="text-[10px] text-slate-400 dark:text-slate-400 font-bold uppercase">
-                Số cột đèn quản lý
+                Số mạch nguồn (Feeders)
               </div>
               <div className="text-base font-black text-slate-900 dark:text-slate-100 mt-1">
-                {cabinet.pole_count} cột
+                {cabinet.feeder_ids?.length || 0} mạch
               </div>
             </div>
 
@@ -64,18 +64,26 @@ export const CabinetDetailModal: React.FC<CabinetDetailModalProps> = ({
               </div>
               <div className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-1 flex items-center gap-1">
                 <MapPin className="w-3.5 h-3.5 text-blue-500" />
-                <span>{cabinet.has_geometry ? 'Đã có tọa độ' : 'Chưa định vị'}</span>
+                <span>
+                  {hasGeo
+                    ? `${cabinet.location.lat.toFixed(5)}, ${cabinet.location.lng.toFixed(5)}`
+                    : 'Chưa định vị'}
+                </span>
               </div>
             </div>
           </div>
 
           <div className="p-3.5 bg-purple-50/60 dark:bg-purple-950/30 rounded-2xl border border-purple-200 dark:border-purple-900/60 space-y-2">
             <div className="font-bold text-purple-950 dark:text-purple-200 text-xs">
-              Thông tin hành chính:
+              Thông tin chi tiết:
             </div>
             <div className="text-slate-600 dark:text-slate-300 space-y-1">
+              <div><strong>Mã định danh (ID):</strong> {cabinet.cabinet_id || 'Chưa gán'}</div>
               <div><strong>Mã địa bàn (Commune):</strong> {cabinet.commune_id || 'Củ Chi'}</div>
               <div><strong>Mã tham chiếu ngoài:</strong> {cabinet.external_ref || 'Không có'}</div>
+              {cabinet.iot_node_id && (
+                <div><strong>Mã bộ điều khiển IoT:</strong> {cabinet.iot_node_id}</div>
+              )}
               {cabinet.updated_at && (
                 <div><strong>Cập nhật lần cuối:</strong> {cabinet.updated_at}</div>
               )}
@@ -85,19 +93,6 @@ export const CabinetDetailModal: React.FC<CabinetDetailModalProps> = ({
 
         {/* Footer */}
         <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 flex justify-end gap-2">
-          {onOpenEdit && (
-            <button
-              type="button"
-              onClick={() => {
-                onClose()
-                onOpenEdit(cabinet)
-              }}
-              className="px-4 py-2 bg-[#1f3864] dark:bg-blue-600 hover:bg-[#1f3864]/90 dark:hover:bg-blue-500 text-white font-bold rounded-xl text-xs transition cursor-pointer flex items-center gap-1.5"
-            >
-              <Edit3 className="w-3.5 h-3.5" />
-              <span>Chỉnh Sửa</span>
-            </button>
-          )}
           <button
             type="button"
             onClick={onClose}

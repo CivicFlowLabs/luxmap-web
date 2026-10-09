@@ -118,7 +118,7 @@ export const EditPoleModal: React.FC<EditPoleModalProps> = ({
           </div>
 
           <div className="space-y-1">
-            <label className="font-bold text-slate-700 dark:text-slate-300">Tủ / Lộ Feeder kết nối:</label>
+            <label className="font-bold text-slate-700 dark:text-slate-300">Tủ điện quản lý:</label>
             <input
               type="text"
               value={feederId}

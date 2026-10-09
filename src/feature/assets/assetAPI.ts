@@ -6,10 +6,11 @@ import type {
   UpdateSegmentRequest,
 } from '../../types/assets/segments'
 import type {
-  FeederListItemPagedResult,
-  CreateFeederRequest,
-  UpdateFeederRequest,
-} from '../../types/assets/feeders'
+  CabinetListItemPagedResult,
+  CreateCabinetRequest,
+  UpdateCabinetRequest,
+  CabinetDetail,
+} from '../../types/assets/cabinets'
 import type {
   PoleListItemPagedResult,
   CreatePoleRequest,
@@ -39,11 +40,20 @@ export const assetAPI = {
   },
 
   /**
-   * Lấy danh sách Tủ điện / Lộ cấp nguồn
-   * GET /api/v1/assets/feeders
+   * Lấy danh sách Tủ điện
+   * GET /api/v1/assets/cabinets
    */
-  getFeeders: async (params?: AssetQueryParams): Promise<FeederListItemPagedResult> => {
-    const response = await apiClient.get<FeederListItemPagedResult>('/assets/feeders', { params })
+  getCabinets: async (params?: AssetQueryParams): Promise<CabinetListItemPagedResult> => {
+    const response = await apiClient.get<CabinetListItemPagedResult>('/assets/cabinets', { params })
+    return response.data
+  },
+
+  /**
+   * Lấy chi tiết Tủ điện
+   * GET /api/v1/assets/cabinets/{cabinetId}
+   */
+  getCabinetDetail: async (cabinetId: string): Promise<CabinetDetail> => {
+    const response = await apiClient.get<CabinetDetail>(`/assets/cabinets/${encodeURIComponent(cabinetId)}`)
     return response.data
   },
 
@@ -74,18 +84,18 @@ export const assetAPI = {
 
   /**
    * Thêm mới Tủ điện
-   * POST /api/v1/assets/feeders
+   * POST /api/v1/assets/cabinets
    */
-  createFeeder: async (data: CreateFeederRequest): Promise<void> => {
-    await apiClient.post('/assets/feeders', data)
+  createCabinet: async (data: CreateCabinetRequest): Promise<void> => {
+    await apiClient.post('/assets/cabinets', data)
   },
 
   /**
    * Cập nhật Tủ điện
-   * PUT /api/v1/assets/feeders/{feederId}
+   * PUT /api/v1/assets/cabinets/{cabinetId}
    */
-  updateFeeder: async (feederId: string, data: UpdateFeederRequest): Promise<void> => {
-    await apiClient.put(`/assets/feeders/${encodeURIComponent(feederId)}`, data)
+  updateCabinet: async (cabinetId: string, data: UpdateCabinetRequest): Promise<void> => {
+    await apiClient.put(`/assets/cabinets/${encodeURIComponent(cabinetId)}`, data)
   },
 
   /**
@@ -134,13 +144,13 @@ export const assetAPI = {
   },
 
   /**
-   * Nạp danh mục Tủ điện / Lộ cấp nguồn qua CSV
-   * POST /api/v1/assets/import/feeders
+   * Nạp danh mục Tủ điện qua CSV
+   * POST /api/v1/assets/import/cabinets
    */
-  importFeeders: async (file: File): Promise<ImportResult> => {
+  importCabinets: async (file: File): Promise<ImportResult> => {
     const formData = new FormData()
     formData.append('file', file)
-    const response = await apiClient.post<ImportResult>('/assets/import/feeders', formData, {
+    const response = await apiClient.post<ImportResult>('/assets/import/cabinets', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
     return response.data

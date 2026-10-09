@@ -155,7 +155,7 @@ export const AssetManagementPage: React.FC = () => {
             />
           </button>
 
-          {/* Tab 3: Tủ điện & Mạch nguồn (Feeder) */}
+          {/* Tab 3: Tủ điện */}
           <button
             type="button"
             onClick={() => {
@@ -176,7 +176,7 @@ export const AssetManagementPage: React.FC = () => {
                   : 'text-slate-400'
               }`}
             />
-            <span>Tủ điện & Lộ nguồn</span>
+            <span>Tủ điện</span>
             <TabCountBadge
               count={cabinets.length}
               isLoading={isLoadingAssets}

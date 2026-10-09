@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Zap, X, CheckCircle2 } from 'lucide-react'
-import type { FeederListItem } from '../../../../types/assets/feeders'
+import type { CabinetListItem } from '../../../../types/assets/cabinets'
 import type { SegmentListItem } from '../../../../types/assets/segments'
 
 export interface EditCabinetModalProps {
   isOpen: boolean
-  cabinet: FeederListItem | null
+  cabinet: CabinetListItem | null
   availableSegments?: SegmentListItem[]
   onClose: () => void
-  onSave: (updated: FeederListItem) => void
+  onSave: (updated: CabinetListItem) => void
 }
 
 export const EditCabinetModal: React.FC<EditCabinetModalProps> = ({
@@ -22,7 +22,7 @@ export const EditCabinetModal: React.FC<EditCabinetModalProps> = ({
 
   useEffect(() => {
     if (cabinet) {
-      setCabinetName(cabinet.feeder_name || cabinet.feeder_id || '')
+      setCabinetName(cabinet.cabinet_name || cabinet.cabinet_id || '')
     }
   }, [cabinet])
 
@@ -30,9 +30,9 @@ export const EditCabinetModal: React.FC<EditCabinetModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const updated: FeederListItem = {
+    const updated: CabinetListItem = {
       ...cabinet,
-      feeder_name: cabinetName,
+      cabinet_name: cabinetName,
       updated_at: new Date().toISOString(),
     }
     onSave(updated)
@@ -56,7 +56,7 @@ export const EditCabinetModal: React.FC<EditCabinetModalProps> = ({
               <Zap className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-sm">Chỉnh Sửa Tủ Điện: {cabinet.feeder_id}</h3>
+              <h3 className="font-bold text-white text-sm">Chỉnh Sửa Tủ Điện: {cabinet.external_ref || cabinet.cabinet_id}</h3>
               <p className="text-[11px] text-slate-300 dark:text-slate-400">Địa bàn: {cabinet.commune_id || 'Củ Chi'}</p>
             </div>
           </div>
@@ -72,7 +72,7 @@ export const EditCabinetModal: React.FC<EditCabinetModalProps> = ({
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs text-slate-800 dark:text-slate-200">
           <div className="space-y-1">
-            <label className="font-bold text-slate-700 dark:text-slate-300">Tên tủ điện / Lộ nguồn:</label>
+            <label className="font-bold text-slate-700 dark:text-slate-300">Tên tủ điện:</label>
             <input
               type="text"
               value={cabinetName}
@@ -82,9 +82,9 @@ export const EditCabinetModal: React.FC<EditCabinetModalProps> = ({
           </div>
 
           <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-1 text-slate-600 dark:text-slate-300 text-xs">
-            <div><strong>Mã tủ điện (ID):</strong> {cabinet.feeder_id}</div>
-            <div><strong>Số cột quản lý:</strong> {cabinet.pole_count} cột</div>
-            <div><strong>Tọa độ GIS:</strong> {cabinet.has_geometry ? 'Đã định vị trên bản đồ' : 'Chưa có tọa độ'}</div>
+            <div><strong>Mã tủ điện (ID):</strong> {cabinet.cabinet_id || cabinet.external_ref}</div>
+            <div><strong>Số mạch nguồn (Feeders):</strong> {cabinet.feeder_ids?.length || 0} mạch</div>
+            <div><strong>Tọa độ GIS:</strong> {cabinet.location?.lat && cabinet.location?.lng ? `${cabinet.location.lat.toFixed(5)}, ${cabinet.location.lng.toFixed(5)}` : 'Chưa có tọa độ'}</div>
           </div>
 
           {/* Footer Actions */}

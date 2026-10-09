@@ -2,13 +2,13 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 import type { ImportResult } from '../../types/assets/import'
 import type { ImportAssetCategory } from './assetAPI'
 import type { PoleListItem } from '../../types/assets/poles'
-import type { FeederListItem } from '../../types/assets/feeders'
+import type { CabinetListItem } from '../../types/assets/cabinets'
 import type { SegmentListItem } from '../../types/assets/segments'
 
 export interface AssetState {
   // Asset Collections from Backend API
   poles: PoleListItem[]
-  cabinets: FeederListItem[]
+  cabinets: CabinetListItem[]
   segments: SegmentListItem[]
   isLoadingAssets: boolean
   loadAssetsError: string | null
@@ -38,7 +38,7 @@ export interface ImportAssetPayload {
 
 export interface FetchAssetsSuccessPayload {
   poles: PoleListItem[]
-  cabinets: FeederListItem[]
+  cabinets: CabinetListItem[]
   segments: SegmentListItem[]
 }
 

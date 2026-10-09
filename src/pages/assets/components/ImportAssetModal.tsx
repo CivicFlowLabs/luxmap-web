@@ -81,12 +81,12 @@ const CATEGORY_CONFIG: Record<string, CategoryConfig> = {
   },
   cabinets: {
     id: 'cabinets' as AssetCategory,
-    label: 'Tủ điện điều khiển',
-    title: 'Tủ Điện Điều Khiển',
+    label: 'Tủ điện',
+    title: 'Tủ Điện',
     icon: <Zap className="w-5 h-5 text-amber-500" />,
-    templateFileName: 'feeders.csv',
-    templateUrl: '/templates/feeders.csv',
-    description: 'Nạp danh mục trạm tủ điện phân phối và lộ cấp nguồn chiếu sáng theo chuẩn Backend.',
+    templateFileName: 'cabinets.csv',
+    templateUrl: '/templates/cabinets.csv',
+    description: 'Nạp danh mục trạm tủ điện chiếu sáng theo chuẩn Backend.',
   },
   segments: {
     id: 'segments' as AssetCategory,
@@ -136,6 +136,14 @@ function parseCsvLine(line: string): string[] {
   return result.map((s) => s.replace(/^"|"$/g, ''))
 }
 
+const REQUIRED_HEADERS_BY_CATEGORY: Record<string, string[]> = {
+  poles: ['external_ref', 'commune_id', 'segment_external_ref', 'geom_wkt'],
+  poles_and_fixtures: ['external_ref', 'commune_id', 'segment_external_ref', 'geom_wkt'],
+  fixtures: ['pole_external_ref', 'lamp_watt', 'install_date'],
+  cabinets: ['external_ref', 'cabinet_name', 'commune_id', 'geom_wkt', 'data_source'],
+  segments: ['external_ref', 'commune_id', 'segment_name', 'road_class', 'length_m', 'geom_wkt'],
+}
+
 export const ImportAssetModal: React.FC<ImportAssetModalProps> = ({
   isOpen,
   onClose,
@@ -153,6 +161,7 @@ export const ImportAssetModal: React.FC<ImportAssetModalProps> = ({
   const [allParsedItems, setAllParsedItems] = useState<ParsedItemReview[]>([])
   const [totalRowsDetected, setTotalRowsDetected] = useState<number>(0)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [importStage, setImportStage] = useState<number>(1)
 
   // Redux State - Single Source of Truth trực tiếp từ Backend Redux Store
   const dispatch = useDispatch()
@@ -163,6 +172,21 @@ export const ImportAssetModal: React.FC<ImportAssetModalProps> = ({
     cabinets = [],
     segments = [],
   } = useSelector((state: RootState) => state.assets)
+
+  // Lifecycle hiệu ứng import theo giai đoạn
+  useEffect(() => {
+    if (isImporting) {
+      setImportStage(1)
+      const t1 = setTimeout(() => setImportStage(2), 2000)
+      const t2 = setTimeout(() => setImportStage(3), 4500)
+      return () => {
+        clearTimeout(t1)
+        clearTimeout(t2)
+      }
+    } else {
+      setImportStage(1)
+    }
+  }, [isImporting])
 
   // Fixtures được trích xuất trực tiếp từ các cột có bóng đèn đang hoạt động
   const fixtures: ManagedFixture[] = React.useMemo(() => {
@@ -231,6 +255,25 @@ export const ImportAssetModal: React.FC<ImportAssetModalProps> = ({
 
       const headerLine = lines[0]
       const headers = parseCsvLine(headerLine).map((h) => h.toLowerCase().trim())
+
+      // KIỂM TRA RÀNG BUỘC CỘT TIÊU ĐỀ THEO TỪNG CATEGORY
+      const required = REQUIRED_HEADERS_BY_CATEGORY[category] || []
+      const missing = required.filter((r) => !headers.includes(r))
+      if (category === 'cabinets') {
+        if (!headers.includes('cabinet_name') && !headers.includes('feeder_name')) {
+          missing.push('cabinet_name')
+        }
+      }
+
+      if (missing.length > 0) {
+        setAllParsedItems([])
+        setTotalRowsDetected(0)
+        setErrorMessage(
+          `Tệp CSV không đúng định dạng của danh mục này (Thiếu các cột bắt buộc: ${missing.join(', ')}). Vui lòng kiểm tra lại tab đang chọn hoặc tải tệp mẫu chuẩn.`
+        )
+        return
+      }
+
       const dataLines = lines.slice(1)
       setTotalRowsDetected(dataLines.length)
 
@@ -314,10 +357,6 @@ export const ImportAssetModal: React.FC<ImportAssetModalProps> = ({
                 <h3 className="font-bold text-slate-900 text-base tracking-tight">
                   Nạp & Kiểm Tra Dữ Liệu: {config.title}
                 </h3>
-                <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                  <Zap className="w-3 h-3 text-blue-600" />
-                  API Backend Trực Tiếp
-                </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
                 {config.description}
@@ -341,19 +380,38 @@ export const ImportAssetModal: React.FC<ImportAssetModalProps> = ({
           {/* Màn hình Loading State khi đang gửi dữ liệu lên Backend */}
           {isImporting ? (
             <div className="py-14 px-6 text-center space-y-5 flex flex-col items-center justify-center animate-in fade-in duration-300">
-              <div className="relative">
-                <div className="w-16 h-16 rounded-2xl bg-blue-50 border-2 border-blue-200 flex items-center justify-center text-blue-600 shadow-md">
-                  <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
+              {/* Pulsing Glowing Ring */}
+              <div className="relative flex items-center justify-center">
+                <div className="absolute w-24 h-24 rounded-full bg-blue-500/20 blur-xl animate-pulse" />
+                <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-slate-800 border-2 border-blue-200 dark:border-blue-500/40 flex items-center justify-center text-blue-600 dark:text-blue-400 shadow-lg relative z-10">
+                  <RefreshCw className="w-8 h-8 animate-spin" />
                 </div>
               </div>
 
-              <div className="space-y-1.5 max-w-md mx-auto">
-                <h4 className="text-base font-bold text-slate-900 tracking-tight">
-                  Đang gửi và xử lý dữ liệu lên máy chủ Backend...
+              {/* Dynamic Status Text */}
+              <div className="space-y-2 max-w-md mx-auto">
+                <h4 className="text-base font-bold text-slate-900 dark:text-white tracking-tight transition-all duration-300">
+                  {importStage === 1 && 'Đang phân tích cấu trúc tệp dữ liệu...'}
+                  {importStage === 2 && 'Đang gửi lên máy chủ và kiểm tra ràng buộc không gian...'}
+                  {importStage >= 3 && 'Đang đồng bộ hóa vào Cơ sở dữ liệu...'}
                 </h4>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Hệ thống Backend đang phân tích tệp dữ liệu, kiểm tra tính toàn vẹn hình học không gian GIS và đồng bộ vào Cơ sở dữ liệu.
+                  {importStage === 1 && 'Hệ thống đang tiền xử lý các dòng dữ liệu và ánh xạ trường chuẩn hóa.'}
+                  {importStage === 2 && 'Máy chủ Backend đang xác thực tọa độ WKT GIS và quan hệ liên kết dữ liệu.'}
+                  {importStage >= 3 && 'Tiến trình lưu trữ và hoàn tất cập nhật vào hệ cơ sở dữ liệu.'}
                 </p>
+              </div>
+
+              {/* Indeterminate Shimmer Animated Progress Bar */}
+              <div className="w-full max-w-xs h-2 bg-slate-100 rounded-full overflow-hidden relative border border-slate-200">
+                <div
+                  className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-600 rounded-full transition-all duration-500 relative overflow-hidden"
+                  style={{
+                    width: importStage === 1 ? '35%' : importStage === 2 ? '70%' : '95%',
+                  }}
+                >
+                  <div className="absolute inset-0 bg-white/30 animate-[pulse_1.5s_infinite]" />
+                </div>
               </div>
 
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl max-w-sm text-center">
@@ -555,7 +613,7 @@ export const ImportAssetModal: React.FC<ImportAssetModalProps> = ({
                           </th>
                           <th className="py-2.5 px-3 w-44">
                             {category === 'fixtures'
-                              ? 'Tuyến đường & Tủ nguồn'
+                              ? 'Tuyến đường & Tủ điện'
                               : category === 'segments'
                                 ? 'Tên tuyến đường'
                                 : category === 'cabinets'
@@ -612,94 +670,147 @@ export const ImportAssetModal: React.FC<ImportAssetModalProps> = ({
 
                             {/* Location */}
                             <td className="py-2.5 px-3 align-top">
-                              {category === 'fixtures' ? (
-                                <>
-                                  <div
-                                    className={`truncate max-w-[170px] ${item.actionType === 'invalid'
-                                      ? 'text-rose-600 font-medium italic'
-                                      : 'font-semibold text-slate-800'
-                                    }`}
-                                    title={item.segmentName}
-                                  >
-                                    {item.segmentName || 'Chưa xác định tuyến'}
-                                  </div>
-                                  {item.cabinetName ? (
-                                    <div className="text-[10px] text-slate-500 font-mono">
-                                      {item.cabinetName}
+                              {(() => {
+                                if (item.category === 'fixtures') {
+                                  const parentPole = poles.find(
+                                    (p) =>
+                                      (p.pole_id && p.pole_id === item.data.pole_id) ||
+                                      (p.external_ref && p.external_ref.toLowerCase() === item.externalRef.toLowerCase())
+                                  )
+                                  const seg = segments.find(
+                                    (s) =>
+                                      (parentPole?.segment_id && s.segment_id === parentPole.segment_id) ||
+                                      (parentPole?.segment_id && s.external_ref?.toLowerCase() === parentPole.segment_id.toLowerCase())
+                                  )
+                                  const cab = cabinets.find(
+                                    (c) =>
+                                      (parentPole?.feeder_id && (c.cabinet_id === parentPole.feeder_id || c.external_ref === parentPole.feeder_id)) ||
+                                      (parentPole?.feeder_id && c.external_ref?.toLowerCase() === parentPole.feeder_id.toLowerCase())
+                                  )
+                                  return (
+                                    <>
+                                      <div
+                                        className={`truncate max-w-[170px] ${item.actionType === 'invalid'
+                                          ? 'text-rose-600 font-medium italic'
+                                          : 'font-semibold text-slate-800'
+                                        }`}
+                                        title={seg?.segment_name || 'Cột ' + item.externalRef}
+                                      >
+                                        {seg?.segment_name || (item.actionType === 'invalid' ? item.errorMsg : `Cột ${item.externalRef}`)}
+                                      </div>
+                                      {cab?.cabinet_name ? (
+                                        <div className="text-[10px] text-slate-500 font-mono">
+                                          {cab.cabinet_name}
+                                        </div>
+                                      ) : parentPole?.feeder_id ? (
+                                        <div className="text-[10px] text-slate-500 font-mono">
+                                          Tủ: {parentPole.feeder_id}
+                                        </div>
+                                      ) : null}
+                                    </>
+                                  )
+                                }
+
+                                if (item.category === 'segments') {
+                                  return (
+                                    <>
+                                      <div className="font-semibold text-slate-800 truncate max-w-[170px]" title={item.data.segment_name || ''}>
+                                        {item.data.segment_name || item.externalRef}
+                                      </div>
+                                      {item.data.commune_id && (
+                                        <div className="text-[10px] text-slate-500 font-medium">
+                                          Địa bàn: {formatCommuneDisplayName(item.data.commune_id)}
+                                        </div>
+                                      )}
+                                    </>
+                                  )
+                                }
+
+                                if (item.category === 'cabinets') {
+                                  return (
+                                    <>
+                                      <div className="font-semibold text-slate-800 truncate max-w-[170px]" title={item.data.cabinet_name || ''}>
+                                        {item.data.cabinet_name || item.externalRef}
+                                      </div>
+                                      {item.data.commune_id && (
+                                        <div className="text-[10px] text-slate-500 font-medium">
+                                          Địa bàn: {formatCommuneDisplayName(item.data.commune_id)}
+                                        </div>
+                                      )}
+                                    </>
+                                  )
+                                }
+
+                                // Poles
+                                const seg = segments.find(
+                                  (s) =>
+                                    (item.data.segment_id && s.segment_id === item.data.segment_id) ||
+                                    (item.data.segment_id && s.external_ref?.toLowerCase() === item.data.segment_id.toLowerCase())
+                                )
+                                return (
+                                  <>
+                                    <div className="font-medium text-slate-800 truncate max-w-[170px]" title={seg?.segment_name || ''}>
+                                      {seg?.segment_name || (item.data.segment_id ? `Tuyến ${item.data.segment_id}` : 'Chưa gán tuyến')}
                                     </div>
-                                  ) : item.cabinetId ? (
-                                    <div className="text-[10px] text-slate-500 font-mono">
-                                      Tủ: {item.cabinetId}
-                                    </div>
-                                  ) : null}
-                                </>
-                              ) : category === 'segments' ? (
-                                <>
-                                  <div className="font-semibold text-slate-800 truncate max-w-[170px]" title={item.segmentName}>
-                                    {item.segmentName}
-                                  </div>
-                                  {item.communeId && (
-                                    <div className="text-[10px] text-slate-500 font-medium">
-                                      Địa bàn: {formatCommuneDisplayName(item.communeId)}
-                                    </div>
-                                  )}
-                                </>
-                              ) : category === 'cabinets' ? (
-                                <>
-                                  <div className="font-semibold text-slate-800 truncate max-w-[170px]" title={item.cabinetName}>
-                                    {item.cabinetName}
-                                  </div>
-                                  {item.communeId && (
-                                    <div className="text-[10px] text-slate-500 font-medium">
-                                      Địa bàn: {formatCommuneDisplayName(item.communeId)}
-                                    </div>
-                                  )}
-                                </>
-                              ) : (
-                                <>
-                                  <div className="font-medium text-slate-800 truncate max-w-[170px]" title={item.segmentName}>
-                                    {item.segmentName}
-                                  </div>
-                                  {item.cabinetId && (
-                                    <div className="text-[10px] text-slate-500 font-mono">
-                                      Tủ: {item.cabinetId}
-                                    </div>
-                                  )}
-                                  {item.note && (
-                                    <div className="text-[10px] text-amber-700 font-medium truncate max-w-[170px] flex items-center gap-1 mt-0.5" title={item.note}>
-                                      <Bookmark className="w-3 h-3 text-amber-500 shrink-0" />
-                                      <span>{item.note}</span>
-                                    </div>
-                                  )}
-                                </>
-                              )}
+                                    {item.data.feeder_id && (
+                                      <div className="text-[10px] text-slate-500 font-mono">
+                                        Tủ: {item.data.feeder_id}
+                                      </div>
+                                    )}
+                                    {item.data.note && (
+                                      <div className="text-[10px] text-amber-700 font-medium truncate max-w-[170px] flex items-center gap-1 mt-0.5" title={item.data.note}>
+                                        <Bookmark className="w-3 h-3 text-amber-500 shrink-0" />
+                                        <span>{item.data.note}</span>
+                                      </div>
+                                    )}
+                                  </>
+                                )
+                              })()}
                             </td>
 
                             {/* Specs */}
                             <td className="py-2.5 px-3 align-top font-mono text-[10px] text-slate-600">
-                              {category === 'fixtures' ? (
-                                <div>
-                                  <span className="font-bold text-slate-800">{item.lampWatt} W</span> •{' '}
-                                  {item.powerSource === 'solar' ? 'NL Mặt Trời' : 'Lưới điện'}
-                                </div>
-                              ) : category === 'segments' ? (
-                                <div>
-                                  <span className="font-bold text-slate-800">
-                                    {item.roadClass === 'inter_commune' ? 'Đường liên xã' : 'Đường liên thôn'}
-                                  </span>
-                                  {item.lengthM ? ` • ${item.lengthM}m` : ''}
-                                </div>
-                              ) : category === 'cabinets' ? (
-                                <div>
-                                  <span className="font-bold text-slate-800">Trạm tủ hạ thế</span>
-                                  {item.communeId ? ` • ${getCommuneName(item.communeId)}` : ''}
-                                </div>
-                              ) : (
-                                <>
-                                  <div>Lat: {item.lat.toFixed(5)}</div>
-                                  <div>Lng: {item.lng.toFixed(5)}</div>
-                                </>
-                              )}
+                              {(() => {
+                                if (item.category === 'fixtures') {
+                                  return (
+                                    <div>
+                                      <span className="font-bold text-slate-800">{item.data.lamp_watt} W</span> •{' '}
+                                      {item.data.power_source === 'grid' ? 'Lưới điện' : item.data.power_source}
+                                    </div>
+                                  )
+                                }
+                                if (item.category === 'segments') {
+                                  return (
+                                    <div>
+                                      <span className="font-bold text-slate-800">
+                                        {item.data.road_class === 'inter_commune' ? 'Đường liên xã' : 'Đường liên thôn'}
+                                      </span>
+                                      {item.data.length_m ? ` • ${item.data.length_m}m` : ''}
+                                    </div>
+                                  )
+                                }
+                                if (item.category === 'cabinets') {
+                                  return (
+                                    <div>
+                                      <span className="font-bold text-slate-800">Tủ điện</span>
+                                      {item.data.commune_id ? ` • ${getCommuneName(item.data.commune_id)}` : ''}
+                                    </div>
+                                  )
+                                }
+                                // Poles
+                                return (
+                                  <div>
+                                    <span className="font-semibold text-slate-700">WKT GIS</span>
+                                    {item.data.geom_wkt ? (
+                                      <div className="text-[9px] text-slate-400 font-mono truncate max-w-[110px]" title={item.data.geom_wkt}>
+                                        {item.data.geom_wkt}
+                                      </div>
+                                    ) : (
+                                      <div className="text-[9px] text-slate-400 italic">Chưa có WKT</div>
+                                    )}
+                                  </div>
+                                )
+                              })()}
                             </td>
 
                             {/* Diffs / Changes list or Error */}
@@ -711,13 +822,19 @@ export const ImportAssetModal: React.FC<ImportAssetModalProps> = ({
                                 </div>
                               ) : item.actionType === 'new' ? (
                                 <div className="text-[11px] text-emerald-700 font-medium">
-                                  {category === 'fixtures'
-                                    ? `Đèn LED ${item.lampWatt}W • Nguồn: ${item.powerSource === 'grid' ? 'Lưới điện' : 'Mặt trời'} • Hạn BH: ${item.warrantyExpiry || 'Chưa có'}`
-                                    : category === 'segments'
-                                      ? `Tuyến: ${item.segmentName} • Dài: ${item.lengthM}m • Cấp: ${item.roadClass === 'inter_commune' ? 'Liên xã' : 'Liên thôn'}`
-                                      : category === 'cabinets'
-                                        ? `Tủ: ${item.cabinetName} • ${formatCommuneDisplayName(item.communeId)}`
-                                        : `Tạo mới (${item.lampWatt}W, ${item.segmentName})${item.note ? ` • Ghi chú: ${item.note}` : ''}`}
+                                  {(() => {
+                                    if (item.category === 'fixtures') {
+                                      return `Đèn LED ${item.data.lamp_watt}W • Nguồn: ${item.data.power_source === 'grid' ? 'Lưới điện' : 'Mặt trời'} • Hạn BH: ${item.data.warranty_expiry || 'Chưa có'}`
+                                    }
+                                    if (item.category === 'segments') {
+                                      return `Tuyến: ${item.data.segment_name || item.externalRef} • Dài: ${item.data.length_m}m • Cấp: ${item.data.road_class === 'inter_commune' ? 'Liên xã' : 'Liên thôn'}`
+                                    }
+                                    if (item.category === 'cabinets') {
+                                      return `Tủ: ${item.data.cabinet_name || item.externalRef} • ${formatCommuneDisplayName(item.data.commune_id)}`
+                                    }
+                                    // Poles
+                                    return `Tạo mới (${item.fixtureData?.lamp_watt ?? 100}W, ${item.externalRef})${item.data.note ? ` • Ghi chú: ${item.data.note}` : ''}`
+                                  })()}
                                 </div>
                               ) : (
                                 <div className="flex flex-wrap items-center gap-1.5">
